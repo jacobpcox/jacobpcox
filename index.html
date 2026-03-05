@@ -1,0 +1,931 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jacob Cox | Developer Portfolio</title>
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg: #0a0a0f;
+      --surface: #12121a;
+      --surface-hover: #1a1a26;
+      --border: #1e1e2e;
+      --text: #e0e0e8;
+      --text-muted: #8888a0;
+      --accent: #6c63ff;
+      --accent-glow: rgba(108, 99, 255, 0.15);
+      --green: #22c55e;
+      --blue: #3b82f6;
+      --orange: #f59e0b;
+      --pink: #ec4899;
+      --cyan: #06b6d4;
+      --red: #ef4444;
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* Floating background shapes */
+    .bg-shapes {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 0;
+      overflow: hidden;
+    }
+
+    .shape {
+      position: absolute;
+      border-radius: 50%;
+      opacity: 0;
+      animation: floatShape linear infinite;
+    }
+
+
+    @keyframes floatShape {
+      0% {
+        opacity: 0;
+        transform: translateY(100vh) rotate(0deg) scale(0.5);
+      }
+      10% {
+        opacity: var(--shape-opacity, 0.08);
+      }
+      80% {
+        opacity: var(--shape-opacity, 0.08);
+      }
+      100% {
+        opacity: 0;
+        transform: translateY(-100px) rotate(360deg) scale(1);
+      }
+    }
+
+    /* Header */
+    .hero {
+      min-height: 60vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      padding: 4rem 2rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(circle at 50% 50%, var(--accent-glow) 0%, transparent 50%);
+      animation: pulse 8s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 0.5; transform: scale(1); }
+      50% { opacity: 1; transform: scale(1.1); }
+    }
+
+    .hero-content { position: relative; z-index: 1; }
+
+    .hero h1 {
+      font-size: clamp(2.5rem, 6vw, 4.5rem);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      margin-bottom: 0.5rem;
+      background: linear-gradient(135deg, #fff 0%, var(--accent) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero p {
+      font-size: 1.2rem;
+      color: var(--text-muted);
+      max-width: 600px;
+      margin: 0.5rem auto 2rem;
+    }
+
+    .stats {
+      display: flex;
+      gap: 2.5rem;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .stat {
+      text-align: center;
+    }
+
+    .stat-number {
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--accent);
+    }
+
+    .stat-label {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+
+    /* Tech bar */
+    .tech-bar {
+      display: flex;
+      justify-content: center;
+      gap: 1.5rem;
+      flex-wrap: wrap;
+      padding: 1.5rem 2rem;
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+    }
+
+    .tech-item {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .tech-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    /* Navigation / Filters */
+    .filters {
+      display: flex;
+      justify-content: center;
+      gap: 0.5rem;
+      padding: 2rem 2rem 1rem;
+      flex-wrap: wrap;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .filter-btn {
+      padding: 0.5rem 1.2rem;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .filter-btn:hover {
+      border-color: var(--accent);
+      color: var(--text);
+    }
+
+    .filter-btn.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+
+    /* Projects grid */
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+
+    .section-title {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin: 2rem 0 1rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 2px solid var(--accent);
+      display: inline-block;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+      gap: 1.25rem;
+      margin-bottom: 3rem;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      transition: all 0.25s ease;
+      cursor: default;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: var(--card-accent, var(--accent));
+      opacity: 0;
+      transition: opacity 0.25s;
+    }
+
+    .card:hover {
+      border-color: var(--card-accent, var(--accent));
+      background: var(--surface-hover);
+      transform: translateY(-2px);
+    }
+
+    .card:hover::before { opacity: 1; }
+
+    .card-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 0.75rem;
+    }
+
+    .card-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .card-type {
+      font-size: 0.7rem;
+      padding: 0.2rem 0.6rem;
+      border-radius: 999px;
+      background: var(--accent-glow);
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      white-space: nowrap;
+    }
+
+    .card-desc {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      margin-bottom: 1rem;
+      line-height: 1.5;
+    }
+
+    .card-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+    }
+
+    .tag {
+      font-size: 0.75rem;
+      padding: 0.2rem 0.6rem;
+      border-radius: 6px;
+      background: rgba(255,255,255,0.05);
+      color: var(--text-muted);
+      border: 1px solid rgba(255,255,255,0.06);
+    }
+
+    /* Footer */
+    footer {
+      text-align: center;
+      padding: 3rem 2rem;
+      border-top: 1px solid var(--border);
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+
+    footer a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    /* Responsive */
+    @media (max-width: 600px) {
+      .grid { grid-template-columns: 1fr; }
+      .stats { gap: 1.5rem; }
+      .hero { min-height: 50vh; padding: 3rem 1.5rem; }
+    }
+
+    /* Animations */
+    .card {
+      opacity: 0;
+      transform: translateY(20px);
+      animation: fadeUp 0.4s ease forwards;
+    }
+
+    @keyframes fadeUp {
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .hidden { display: none !important; }
+
+    /* Ensure content sits above floating shapes */
+    .hero, .tech-bar, .filters, .container, footer { position: relative; z-index: 1; }
+  </style>
+</head>
+<body>
+
+  <div class="bg-shapes" id="bg-shapes"></div>
+
+  <section class="hero">
+    <div class="hero-content">
+      <h1>Jacob Cox</h1>
+      <p>Full-stack developer building enterprise systems, creative side projects, and everything in between.</p>
+      <div class="stats">
+        <div class="stat">
+          <div class="stat-number" id="years-count">0</div>
+          <div class="stat-label">Years Coding</div>
+        </div>
+        <div class="stat">
+          <div class="stat-number">30+</div>
+          <div class="stat-label">Projects</div>
+        </div>
+        <div class="stat">
+          <div class="stat-number">8</div>
+          <div class="stat-label">Languages</div>
+        </div>
+        <div class="stat">
+          <div class="stat-number">6</div>
+          <div class="stat-label">Frameworks</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="tech-bar">
+    <span class="tech-item"><span class="tech-dot" style="background:#6c63ff"></span> C#</span>
+    <span class="tech-item"><span class="tech-dot" style="background:#3b82f6"></span> F#</span>
+    <span class="tech-item"><span class="tech-dot" style="background:#f59e0b"></span> TypeScript</span>
+    <span class="tech-item"><span class="tech-dot" style="background:#22c55e"></span> Python</span>
+    <span class="tech-item"><span class="tech-dot" style="background:#ec4899"></span> C++</span>
+    <span class="tech-item"><span class="tech-dot" style="background:#06b6d4"></span> JavaScript</span>
+    <span class="tech-item"><span class="tech-dot" style="background:#ef4444"></span> VB.NET</span>
+    <span class="tech-item"><span class="tech-dot" style="background:#a855f7"></span> SQL</span>
+  </div>
+
+  <nav class="filters">
+    <button class="filter-btn active" data-filter="all">All</button>
+    <button class="filter-btn" data-filter="api">APIs</button>
+    <button class="filter-btn" data-filter="web">Web Apps</button>
+    <button class="filter-btn" data-filter="desktop">Desktop</button>
+    <button class="filter-btn" data-filter="library">Libraries</button>
+    <button class="filter-btn" data-filter="personal">Personal</button>
+    <button class="filter-btn" data-filter="experiment">Experiments</button>
+  </nav>
+
+  <main class="container">
+
+    <h2 class="section-title">APIs &amp; Backend</h2>
+    <div class="grid" id="grid-api">
+
+      <div class="card" data-category="api" style="--card-accent: #3b82f6; animation-delay: 0.05s">
+        <div class="card-header">
+          <span class="card-title">Accounting Report Generator</span>
+          <span class="card-type">Work</span>
+        </div>
+        <p class="card-desc">REST API that generates and serves accounting reports including checkbook and financial documents. Deployed via Azure Pipelines to IIS.</p>
+        <div class="card-tags">
+          <span class="tag">F#</span>
+          <span class="tag">ASP.NET Core 8</span>
+          <span class="tag">QuestPDF</span>
+          <span class="tag">SQL Server</span>
+        </div>
+      </div>
+
+      <div class="card" data-category="api" style="--card-accent: #3b82f6; animation-delay: 0.1s">
+        <div class="card-header">
+          <span class="card-title">Automation Report Service</span>
+          <span class="card-type">Work</span>
+        </div>
+        <p class="card-desc">REST API for generating automation-related reports with live-reload support during development.</p>
+        <div class="card-tags">
+          <span class="tag">C#</span>
+          <span class="tag">ASP.NET Core 8</span>
+          <span class="tag">Azure Pipelines</span>
+        </div>
+      </div>
+
+      <div class="card" data-category="api" style="--card-accent: #3b82f6; animation-delay: 0.15s">
+        <div class="card-header">
+          <span class="card-title">CNC Machine Operations API</span>
+          <span class="card-type">Work</span>
+        </div>
+        <p class="card-desc">Central REST API for CNC machine operations covering cabinets, logistics, materials, orders, networking, and router integrations.</p>
+        <div class="card-tags">
+          <span class="tag">C#</span>
+          <span class="tag">ASP.NET Core 8</span>
+          <span class="tag">EF Core</span>
+          <span class="tag">SQL Server</span>
+        </div>
+      </div>
+
+      <div class="card" data-category="api" style="--card-accent: #3b82f6; animation-delay: 0.2s">
+        <div class="card-header">
+          <span class="card-title">Real-Time Manufacturing Backend</span>
+          <span class="card-type">Work</span>
+        </div>
+        <p class="card-desc">Backend serving mill scheduling, order management, and real-time manufacturing data with Active Directory authentication.</p>
+        <div class="card-tags">
+          <span class="tag">C#</span>
+          <span class="tag">ASP.NET Core 8</span>
+          <span class="tag">Dapper</span>
+          <span class="tag">SignalR</span>
+          <span class="tag">ADFS</span>
+        </div>
+      </div>
+
+      <div class="card" data-category="api" style="--card-accent: #22c55e; animation-delay: 0.25s">
+        <div class="card-header">
+          <span class="card-title">Employee Data GraphQL Service</span>
+          <span class="card-type">Work</span>
+        </div>
+        <p class="card-desc">GraphQL API serving employee data with role-based authorization for confidential fields like wages and benefits.</p>
+        <div class="card-tags">
+          <span class="tag">C#</span>
+          <span class="tag">Hot Chocolate (GraphQL)</span>
+          <span class="tag">EF Core</span>
+          <span class="tag">JWT</span>
+        </div>
+      </div>
+
+      <div class="card" data-category="api" style="--card-accent: #3b82f6; animation-delay: 0.3s">
+        <div class="card-header">
+          <span class="card-title">Trust Fund Distribution API</span>
+          <span class="card-type">Work</span>
+        </div>
+        <p class="card-desc">REST API for managing trust fund account splits and distribution paths. Serves as a reference implementation for F# + SQL type providers.</p>
+        <div class="card-tags">
+          <span class="tag">F#</span>
+          <span class="tag">ASP.NET Core</span>
+          <span class="tag">SQL Type Providers</span>
+        </div>
+      </div>
+
+    </div>
+
+    <h2 class="section-title">Web Applications</h2>
+    <div class="grid" id="grid-web">
+
+      <div class="card" data-category="web" style="--card-accent: #6c63ff; animation-delay: 0.05s">
+        <div class="card-header">
+          <span class="card-title">Manufacturing Floor Dashboard</span>
+          <span class="card-type">Work</span>
+        </div>
+        <p class="card-desc">Blazor WASM frontend for CNC operations featuring logistics, mill scheduling, order tracking, and router management with real-time updates.</p>
+        <div class="card-tags">
+          <span class="tag">Blazor WASM</span>
+          <span class="tag">.NET 8</span>
+          <span class="tag">Tailwind CSS 4</span>
+          <span class="tag">DaisyUI</span>
+          <span class="tag">SignalR</span>
+        </div>
+      </div>
+
+      <div class="card" data-category="web" style="--card-accent: #f59e0b; animation-delay: 0.1s">
+        <div class="card-header">
+          <span class="card-title">Check Writing & Accounting App</span>
+          <span class="card-type">Work</span>
+        </div>
+        <p class="card-desc">Full-featured accounting app handling check writing, reports, and tools with an Electron desktop wrapper for Windows distribution.</p>
+        <div class="card-tags">
+          <span class="tag">SvelteKit</span>
+          <span class="tag">TypeScript</span>
+          <span class="tag">Tailwind CSS</span>
+          <span class="tag">AG Grid</span>
+          <span class="tag">Electron</span>
+        </div>
+      </div>
+
+      <div class="card" data-category="web" style="--card-accent: #f59e0b; animation-delay: 0.15s">
+        <div class="card-header">
+          <span class="card-title">Financial Management Portal</span>
+          <span class="card-type">Work</span>
+        </div>
+        <p class="card-desc">SvelteKit web frontend unifying checkbook, trust distribution, and report generation services into a single portal. Deployed to IIS.</p>
+        <div class="card-tags">
+          <span class="tag">SvelteKit</span>
+          <span class="tag">TypeScript</span>
+          <span class="tag">Tailwind CSS</span>
+          <span class="tag">DaisyUI</span>
+          <span class="tag">OpenAPI</span>
+        </div>
+      </div>
+
+      <div class="card" data-category="web" style="--card-accent: #6c63ff; animation-delay: 0.2s">
+        <div class="card-header">
+          <span class="card-title">Office Space Booking System</span>
+          <span class="card-type">Work</span>
+        </div>
+        <p class="card-desc">Blazor WASM app for managing office space reservations with views for spaces, reservations, and user management.</p>
+        <div class="card-tags">
+          <span class="tag">Blazor WASM</span>
+          <span class="tag">.NET 8</span>
+          <span class="tag">SQL Server</span>
+        </div>
+      </div>
+
+    </div>
+
+    <h2 class="section-title">Desktop Applications</h2>
+    <div class="grid" id="grid-desktop">
+
+      <div class="card" data-category="desktop" style="--card-accent: #6c63ff; animation-delay: 0.05s">
+        <div class="card-header">
+          <span class="card-title">Desktop Accounting Suite</span>
+          <span class="card-type">Work</span>
+        </div>
+        <p class="card-desc">Desktop accounting application with dependency injection, layered architecture, and built-in report viewer.</p>
+        <div class="card-tags">
+          <span class="tag">C#</span>
+          <span class="tag">WPF</span>
+          <span class="tag">.NET Framework 4.8</span>
+          <span class="tag">RDLC</span>
+        </div>
+      </div>
+
+      <div class="card" data-category="desktop" style="--card-accent: #3b82f6; animation-delay: 0.1s">
+        <div class="card-header">
+          <span class="card-title">Payroll Processing App</span>
+          <span class="card-type">Work</span>
+        </div>
+        <p class="card-desc">Desktop payroll application featuring F# domain logic, C# persistence layer, and WPF UI with full test coverage.</p>
+        <div class="card-tags">
+          <span class="tag">C#</span>
+          <span class="tag">F#</span>
+          <span class="tag">WPF</span>
+          <span class="tag">Autofac</span>
+          <span class="tag">MSTest</span>
+        </div>
+      </div>
+
+      <div class="card" data-category="desktop" style="--card-accent: #ef4444; animation-delay: 0.15s">
+        <div class="card-header">
+          <span class="card-title">Employee & Wage Manager</span>
+          <span class="card-type">Work</span>
+        </div>
+        <p class="card-desc">Windows Forms app for managing employee records, wages, and third-party service integrations with a lightweight data access layer.</p>
+        <div class="card-tags">
+          <span class="tag">VB.NET</span>
+          <span class="tag">WinForms</span>
+          <span class="tag">Dapper</span>
+          <span class="tag">SQL Server</span>
+        </div>
+      </div>
+
+      <div class="card" data-category="desktop" style="--card-accent: #6c63ff; animation-delay: 0.2s">
+        <div class="card-header">
+          <span class="card-title">Shipping & Logistics Tracker</span>
+          <span class="card-type">Work</span>
+        </div>
+        <p class="card-desc">Desktop logistics management application with layered architecture, dependency injection, and inter-module messaging.</p>
+        <div class="card-tags">
+          <span class="tag">C#</span>
+          <span class="tag">WPF</span>
+          <span class="tag">Autofac</span>
+          <span class="tag">SQL Server</span>
+        </div>
+      </div>
+
+      <div class="card" data-category="desktop" style="--card-accent: #6c63ff; animation-delay: 0.25s">
+        <div class="card-header">
+          <span class="card-title">Machine Report Viewer</span>
+          <span class="card-type">Work</span>
+        </div>
+        <p class="card-desc">Legacy WPF application for viewing CNC machine reports, predating the newer API/web architecture.</p>
+        <div class="card-tags">
+          <span class="tag">C#</span>
+          <span class="tag">WPF</span>
+          <span class="tag">.NET Framework</span>
+        </div>
+      </div>
+
+    </div>
+
+    <h2 class="section-title">Shared Libraries</h2>
+    <div class="grid" id="grid-library">
+
+      <div class="card" data-category="library" style="--card-accent: #a855f7; animation-delay: 0.05s">
+        <div class="card-header">
+          <span class="card-title">API Middleware & Auth Toolkit</span>
+          <span class="card-type">NuGet</span>
+        </div>
+        <p class="card-desc">Shared library providing middleware for logging, CORS, and correlation IDs, plus authentication handlers and F# railway-oriented error handling.</p>
+        <div class="card-tags">
+          <span class="tag">F#</span>
+          <span class="tag">ASP.NET Core 8</span>
+          <span class="tag">NuGet</span>
+        </div>
+      </div>
+
+      <div class="card" data-category="library" style="--card-accent: #a855f7; animation-delay: 0.1s">
+        <div class="card-header">
+          <span class="card-title">PDF Report Component Library</span>
+          <span class="card-type">NuGet</span>
+        </div>
+        <p class="card-desc">Reusable PDF report components including barcodes, fonts, and layouts shared across multiple accounting and reporting services.</p>
+        <div class="card-tags">
+          <span class="tag">C#</span>
+          <span class="tag">.NET 8</span>
+          <span class="tag">QuestPDF</span>
+        </div>
+      </div>
+
+      <div class="card" data-category="library" style="--card-accent: #a855f7; animation-delay: 0.15s">
+        <div class="card-header">
+          <span class="card-title">Active Directory Integration</span>
+          <span class="card-type">NuGet</span>
+        </div>
+        <p class="card-desc">Active Directory integration library providing user and group lookup services for enterprise applications.</p>
+        <div class="card-tags">
+          <span class="tag">C#</span>
+          <span class="tag">.NET 8</span>
+          <span class="tag">LDAP</span>
+        </div>
+      </div>
+
+      <div class="card" data-category="library" style="--card-accent: #a855f7; animation-delay: 0.2s">
+        <div class="card-header">
+          <span class="card-title">CNC Data Access Layer</span>
+          <span class="card-type">Library</span>
+        </div>
+        <p class="card-desc">Four-layer library (Domain, Models, Persistence, SQL) providing the data foundation for the CNC API ecosystem.</p>
+        <div class="card-tags">
+          <span class="tag">C#</span>
+          <span class="tag">.NET</span>
+          <span class="tag">SQL Server</span>
+        </div>
+      </div>
+
+    </div>
+
+    <h2 class="section-title">Personal Projects</h2>
+    <div class="grid" id="grid-personal">
+
+      <div class="card" data-category="personal" style="--card-accent: #22c55e; animation-delay: 0.05s">
+        <div class="card-header">
+          <span class="card-title">Slack Bot with Slash Commands</span>
+          <span class="card-type">Personal</span>
+        </div>
+        <p class="card-desc">Full-featured Slack bot with slash commands for jokes, histograms, drink menus, and message stats. Includes Docker deployment and MongoDB persistence.</p>
+        <div class="card-tags">
+          <span class="tag">Python</span>
+          <span class="tag">Slack Bolt</span>
+          <span class="tag">MongoDB</span>
+          <span class="tag">Docker</span>
+        </div>
+      </div>
+
+      <div class="card" data-category="personal" style="--card-accent: #ec4899; animation-delay: 0.1s">
+        <div class="card-header">
+          <span class="card-title">AI-Powered Slack Impersonator</span>
+          <span class="card-type">Personal</span>
+        </div>
+        <p class="card-desc">Slack bot that reads messages and auto-responds using a locally hosted LLM, mimicking a specific communication style via a custom style guide.</p>
+        <div class="card-tags">
+          <span class="tag">C++</span>
+          <span class="tag">Slack API</span>
+          <span class="tag">Ollama</span>
+          <span class="tag">Local LLM</span>
+        </div>
+      </div>
+
+      <div class="card" data-category="personal" style="--card-accent: #ef4444; animation-delay: 0.15s">
+        <div class="card-header">
+          <span class="card-title">Auto Teams Call Decliner</span>
+          <span class="card-type">Personal</span>
+        </div>
+        <p class="card-desc">Python script that automatically declines incoming Microsoft Teams calls from a configurable list of users using Windows UI automation.</p>
+        <div class="card-tags">
+          <span class="tag">Python</span>
+          <span class="tag">pywinauto</span>
+          <span class="tag">Desktop Automation</span>
+        </div>
+      </div>
+
+      <div class="card" data-category="personal" style="--card-accent: #6c63ff; animation-delay: 0.2s">
+        <div class="card-header">
+          <span class="card-title">Real-Time Chat & Drawing App</span>
+          <span class="card-type">Personal</span>
+        </div>
+        <p class="card-desc">Real-time chat and collaborative drawing app using Blazor WASM for the client and SignalR for live messaging and drawing sync.</p>
+        <div class="card-tags">
+          <span class="tag">Blazor WASM</span>
+          <span class="tag">ASP.NET Core</span>
+          <span class="tag">SignalR</span>
+        </div>
+      </div>
+
+      <div class="card" data-category="personal" style="--card-accent: #06b6d4; animation-delay: 0.25s">
+        <div class="card-header">
+          <span class="card-title">Gaming Legacy Timer Website</span>
+          <span class="card-type">Personal</span>
+        </div>
+        <p class="card-desc">Dark gaming-themed website that tracks and visualizes gaming history and milestones across multiple platforms.</p>
+        <div class="card-tags">
+          <span class="tag">HTML</span>
+          <span class="tag">CSS</span>
+          <span class="tag">JavaScript</span>
+        </div>
+      </div>
+
+      <div class="card" data-category="personal" style="--card-accent: #ec4899; animation-delay: 0.35s">
+        <div class="card-header">
+          <span class="card-title">Remote Audio Control Server</span>
+          <span class="card-type">Personal</span>
+        </div>
+        <p class="card-desc">Remote volume control system with a hidden background server listening on TCP port 8888, controlling Windows audio via Core Audio API.</p>
+        <div class="card-tags">
+          <span class="tag">C++</span>
+          <span class="tag">Win32</span>
+          <span class="tag">Winsock2</span>
+          <span class="tag">Core Audio</span>
+        </div>
+      </div>
+
+    </div>
+
+    <h2 class="section-title">Experiments &amp; Tools</h2>
+    <div class="grid" id="grid-experiment">
+
+      <div class="card" data-category="experiment" style="--card-accent: #f59e0b; animation-delay: 0.05s">
+        <div class="card-header">
+          <span class="card-title">CNC Software API Bridge</span>
+          <span class="card-type">Experiment</span>
+        </div>
+        <p class="card-desc">VBA macro that bridges CNC routing software to external systems by monitoring a command file and executing machine instructions programmatically.</p>
+        <div class="card-tags">
+          <span class="tag">VBA</span>
+          <span class="tag">AlphaCAM</span>
+          <span class="tag">File-based IPC</span>
+        </div>
+      </div>
+
+      <div class="card" data-category="experiment" style="--card-accent: #f59e0b; animation-delay: 0.1s">
+        <div class="card-header">
+          <span class="card-title">Component Library Starter Kits</span>
+          <span class="card-type">Experiment</span>
+        </div>
+        <p class="card-desc">Starter templates exploring different UI component library integrations with Blazor WASM and utility-first CSS.</p>
+        <div class="card-tags">
+          <span class="tag">Blazor WASM</span>
+          <span class="tag">Tailwind CSS</span>
+          <span class="tag">Blazorise</span>
+          <span class="tag">Flowbite</span>
+        </div>
+      </div>
+
+      <div class="card" data-category="experiment" style="--card-accent: #a855f7; animation-delay: 0.15s">
+        <div class="card-header">
+          <span class="card-title">Database Migration Scripts</span>
+          <span class="card-type">Work</span>
+        </div>
+        <p class="card-desc">Three organized SQL script repositories managing schema migrations across Dev/QC and Production environments.</p>
+        <div class="card-tags">
+          <span class="tag">SQL Server</span>
+          <span class="tag">Migrations</span>
+        </div>
+      </div>
+
+      <div class="card" data-category="experiment" style="--card-accent: #f59e0b; animation-delay: 0.2s">
+        <div class="card-header">
+          <span class="card-title">Desktop Prank Collection</span>
+          <span class="card-type">Fun</span>
+        </div>
+        <p class="card-desc">Collection of C++ and C# pranks including bouncing console windows, randomized visibility, and an infinite Edge browser launcher.</p>
+        <div class="card-tags">
+          <span class="tag">C++</span>
+          <span class="tag">C#</span>
+          <span class="tag">Win32 API</span>
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <footer>
+    <p>Built by Jacob Cox &mdash; <a href="https://github.com/jacobpcox" target="_blank">GitHub</a></p>
+  </footer>
+
+  <script>
+    // Filter buttons
+    const filterBtns = document.querySelectorAll('.filter-btn');
+    const cards = document.querySelectorAll('.card');
+    const sections = document.querySelectorAll('.section-title');
+    const grids = document.querySelectorAll('.grid');
+
+    filterBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        filterBtns.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+
+        const filter = btn.dataset.filter;
+
+        if (filter === 'all') {
+          cards.forEach(c => c.classList.remove('hidden'));
+          sections.forEach(s => s.classList.remove('hidden'));
+          grids.forEach(g => g.classList.remove('hidden'));
+          return;
+        }
+
+        cards.forEach(card => {
+          card.classList.toggle('hidden', card.dataset.category !== filter);
+        });
+
+        // Hide empty sections
+        grids.forEach((grid, i) => {
+          const visibleCards = grid.querySelectorAll('.card:not(.hidden)');
+          const section = grid.previousElementSibling;
+          if (visibleCards.length === 0) {
+            grid.classList.add('hidden');
+            if (section) section.classList.add('hidden');
+          } else {
+            grid.classList.remove('hidden');
+            if (section) section.classList.remove('hidden');
+          }
+        });
+      });
+    });
+
+    // Intersection Observer for scroll animations
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.style.animationPlayState = 'running';
+        }
+      });
+    }, { threshold: 0.1 });
+
+    cards.forEach(card => {
+      card.style.animationPlayState = 'paused';
+      observer.observe(card);
+    });
+
+    // Years coding counter (since March 9, 2020)
+    const startDate = new Date(2020, 2, 9); // month is 0-indexed
+    const yearsEl = document.getElementById('years-count');
+
+    function updateYears() {
+      const now = new Date();
+      const diff = now - startDate;
+      const years = diff / (1000 * 60 * 60 * 24 * 365.25);
+      yearsEl.textContent = Math.floor(years) + '+';
+    }
+
+    updateYears();
+    setInterval(updateYears, 1000 * 60 * 60); // update every hour
+
+    // Floating background shapes
+    const shapesContainer = document.getElementById('bg-shapes');
+    const colors = ['#6c63ff', '#3b82f6', '#22c55e', '#f59e0b', '#ec4899', '#06b6d4', '#a855f7'];
+
+    function spawnShape() {
+      const el = document.createElement('div');
+      const color = colors[Math.floor(Math.random() * colors.length)];
+      const size = Math.random() * 40 + 4;
+      const left = Math.random() * 100;
+      const duration = Math.random() * 20 + 15;
+      const delay = Math.random() * 5;
+      const opacity = Math.random() * 0.06 + 0.03;
+
+      el.className = 'shape';
+      el.style.left = left + '%';
+      el.style.width = size + 'px';
+      el.style.height = size + 'px';
+      el.style.background = color;
+      el.style.setProperty('--shape-opacity', opacity);
+      el.style.animationDuration = duration + 's';
+      el.style.animationDelay = delay + 's';
+
+      shapesContainer.appendChild(el);
+
+      setTimeout(() => el.remove(), (duration + delay) * 1000);
+    }
+
+    // Initial batch
+    for (let i = 0; i < 15; i++) spawnShape();
+    // Continuously spawn
+    setInterval(spawnShape, 2000);
+  </script>
+</body>
+</html>
