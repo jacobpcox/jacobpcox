@@ -6,7 +6,7 @@
 <title>Jacob Cox — Full-Stack Developer</title>
 <meta name="description" content="Jacob Cox — full-stack developer. F# and C# back-ends, Blazor and SvelteKit front-ends, manufacturing-floor systems, and side projects.">
 <meta name="author" content="Jacob Cox">
-<meta name="theme-color" content="#0b0c0f">
+<meta name="theme-color" content="#0d0a14">
 <link rel="canonical" href="https://jacobpcox.com">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Jacob Cox — Full-Stack Developer">
@@ -19,22 +19,36 @@
 <style>
   *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
   :root{
-    --bg:#0b0c0f; --panel:#101218; --panel-2:#141720; --line:#20242f; --line-soft:#191c25;
-    --text:#e8eaf0; --muted:#8990a1; --faint:#565d6e; --accent:#5b8cff; --accent-soft:rgba(91,140,255,.12);
+    --bg:#0d0a14; --panel:#15101f; --panel-2:#1c1528; --line:#271d38; --line-soft:#1c1528;
+    --text:#ece8f5; --muted:#9b91b5; --faint:#6b6285; --accent:#a06bff; --accent-soft:rgba(160,107,255,.14);
     --mono:ui-monospace,'JetBrains Mono','Cascadia Code',Consolas,monospace;
     --sans:'Inter','Segoe UI',system-ui,-apple-system,sans-serif;
   }
-  html{scroll-behavior:smooth;scrollbar-width:thin;scrollbar-color:#2c3340 var(--bg)}
+  html{scroll-behavior:smooth;scrollbar-width:thin;scrollbar-color:#2e2542 var(--bg)}
   /* themed scrollbar (WebKit) */
   ::-webkit-scrollbar{width:12px;height:12px}
   ::-webkit-scrollbar-track{background:var(--bg)}
-  ::-webkit-scrollbar-thumb{background:#2a3140;border-radius:999px;border:3px solid var(--bg)}
-  ::-webkit-scrollbar-thumb:hover{background:#3a4456}
+  ::-webkit-scrollbar-thumb{background:#2c2440;border-radius:999px;border:3px solid var(--bg)}
+  ::-webkit-scrollbar-thumb:hover{background:#3d3258}
   ::-webkit-scrollbar-corner{background:var(--bg)}
   body{font-family:var(--sans);background:var(--bg);color:var(--text);line-height:1.6;-webkit-font-smoothing:antialiased;
     background-image:radial-gradient(900px 500px at 88% -12%, rgba(91,140,255,.07), transparent 60%)}
   .wrap{max-width:1120px;margin:0 auto;padding:0 28px}
   a{color:inherit}
+
+  /* floating-circle ambience — rises from the bottom, fades out near the nav */
+  .bg-shapes{position:fixed;inset:0;overflow:hidden;pointer-events:none;z-index:0}
+  .shape{position:absolute;bottom:-80px;border-radius:50%;opacity:0;filter:blur(1px);
+    will-change:transform,opacity;animation:floatUp linear infinite}
+  @keyframes floatUp{
+    0%{opacity:0;transform:translateY(0) scale(.55)}
+    12%{opacity:var(--shape-opacity,.08)}
+    80%{opacity:var(--shape-opacity,.08)}
+    100%{opacity:0;transform:translateY(var(--ty,-100vh)) scale(1)}
+  }
+  /* keep page content above the floating shapes */
+  main.stack,section.contact,footer{position:relative;z-index:1}
+  @media (prefers-reduced-motion: reduce){.bg-shapes{display:none}}
 
   /* two-column layout */
   .stack{padding-top:8px;padding-bottom:20px}
@@ -52,7 +66,7 @@
   }
 
   /* sticky header: holds the slim bar + the collapsing bio hero — with a swooping curved bottom */
-  header.nav{position:fixed;top:0;left:0;right:0;z-index:50;backdrop-filter:blur(12px);background:rgba(13,15,20,.9);
+  header.nav{position:fixed;top:0;left:0;right:0;z-index:50;backdrop-filter:blur(12px);background:rgba(14,10,21,.9);
     border-bottom:1px solid var(--line);border-radius:0 0 50% 50% / 0 0 20px 20px;box-shadow:0 14px 34px rgba(0,0,0,.3)}
   .nav-inner{display:flex;align-items:center;justify-content:space-between;max-width:1120px;margin:0 auto;padding:14px 28px;gap:1rem}
   /* brand name is always visible (the page's h1); only the bio description below it collapses */
@@ -151,7 +165,7 @@
     border:1px solid var(--line);border-radius:999px;padding:.4rem .8rem;cursor:pointer;line-height:1;
     display:inline-flex;align-items:center;gap:.42rem;-webkit-tap-highlight-color:transparent;
     transition:color .12s,border-color .12s,background .12s}
-  .fbtn:hover:not(:disabled),.tpill:hover:not(:disabled){color:var(--text);border-color:#3a4254}
+  .fbtn:hover:not(:disabled),.tpill:hover:not(:disabled){color:var(--text);border-color:#3a3052}
   .fbtn.active,.tpill.on{background:var(--accent);color:#fff;border-color:var(--accent)}
   .fbtn:disabled,.tpill:disabled{opacity:.3;cursor:not-allowed}
   .tpill .ti{display:inline-flex;width:13px;height:13px;flex:none;opacity:.7;transition:opacity .12s}
@@ -215,6 +229,7 @@
 </style>
 </head>
 <body>
+<div class="bg-shapes" id="bg-shapes" aria-hidden="true"></div>
 <header class="nav" id="nav">
   <div class="nav-inner">
     <div class="brand"><h1 class="brand-name">Jacob Cox</h1></div>
@@ -396,6 +411,30 @@
   });
   document.getElementById('cleartech').addEventListener('click', () => { selTech.clear(); render(); });
   render();
+
+  // ── floating-circle ambience ──
+  const shapesBox = document.getElementById('bg-shapes');
+  const shapeColors = ['#5b8cff', '#7c5cff', '#33c2ff', '#4be3c4', '#34d399', '#f59e0b', '#ec4899'];
+  const rand = (a, b) => a + Math.random() * (b - a);
+  function spawnShape(initial) {
+    const el = document.createElement('div');
+    el.className = 'shape';
+    const size = rand(6, 46);
+    el.style.left = rand(0, 100) + '%';
+    el.style.width = el.style.height = size + 'px';
+    el.style.background = shapeColors[Math.floor(Math.random() * shapeColors.length)];
+    el.style.setProperty('--shape-opacity', rand(0.03, 0.1).toFixed(3));
+    el.style.setProperty('--ty', -rand(55, 108).toFixed(1) + 'vh'); // random travel → some dissolve partway up
+    const dur = rand(14, 30);
+    el.style.animationDuration = dur + 's';
+    el.style.animationDelay = (initial ? -rand(0, dur) : 0) + 's'; // stagger the first batch across the screen
+    shapesBox.appendChild(el);
+    setTimeout(() => el.remove(), dur * 1000 + 500);
+  }
+  if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    for (let i = 0; i < 16; i++) spawnShape(true);
+    setInterval(() => spawnShape(false), 2000);
+  }
 
   // contact
   let cl = `<a class="clink primary" href="mailto:${P.email}">${ICON.mail} ${P.email}</a>`;
