@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Airplane Parts — Jacob Cox</title>
+<meta name="description" content="An interactive diagram for learning the proper names of the parts of an airplane, with an explore mode and a quiz.">
+<meta name="theme-color" content="#0d0a14">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230b0c0f'/%3E%3Ctext x='16' y='22' font-family='ui-monospace,monospace' font-size='15' font-weight='700' fill='%235b8cff' text-anchor='middle'%3EJC%3C/text%3E%3C/svg%3E">
+<style>
+  *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+  :root{
+    --bg:#0d0a14; --panel:#15101f; --panel-2:#1c1528; --line:#271d38; --line-soft:#1c1528;
+    --text:#ece8f5; --muted:#9b91b5; --faint:#6b6285; --accent:#a06bff; --accent-soft:rgba(160,107,255,.14);
+    --good:#3ecf8e; --bad:#ff6b7a;
+    --body:#2a2140; --body-line:#54457a; --surf:#352a52; --surf-2:#3f3260;
+    --mono:ui-monospace,'JetBrains Mono','Cascadia Code',Consolas,monospace;
+    --sans:'Inter','Segoe UI',system-ui,-apple-system,sans-serif;
+  }
+  html{scrollbar-width:thin;scrollbar-color:#2e2542 var(--bg)}
+  body{font-family:var(--sans);background:var(--bg);color:var(--text);line-height:1.6;-webkit-font-smoothing:antialiased;
+    background-image:radial-gradient(900px 500px at 88% -12%, rgba(91,140,255,.07), transparent 60%);min-height:100vh}
+  .wrap{max-width:1240px;margin:0 auto;padding:0 28px}
+  a{color:inherit}
+  button{font:inherit;color:inherit}
+
+  header.nav{position:sticky;top:0;z-index:50;backdrop-filter:blur(12px);background:rgba(14,10,21,.9);border-bottom:1px solid var(--line)}
+  .nav-inner{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:14px 28px;max-width:1240px;margin:0 auto}
+  .brand-name{font-size:1.15rem;font-weight:800;letter-spacing:-.02em}
+  .brand-name span{color:var(--muted);font-weight:500}
+  .back{display:inline-flex;align-items:center;gap:.4rem;color:var(--muted);text-decoration:none;font-size:.82rem;padding:.45rem .7rem;border-radius:8px;transition:.15s}
+  .back:hover{color:var(--text);background:var(--panel)}
+
+  .intro{padding:30px 0 18px}
+  .intro h1{font-size:1.9rem;font-weight:800;letter-spacing:-.02em;line-height:1.2}
+  .intro p{color:var(--muted);max-width:680px;margin-top:8px}
+
+  .toolbar{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:16px}
+  .seg{display:inline-flex;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:3px}
+  .seg button{background:transparent;border:0;padding:.4rem .85rem;border-radius:7px;font-size:.84rem;color:var(--muted);cursor:pointer;transition:.15s}
+  .seg button:hover{color:var(--text)}
+  .seg button[aria-pressed="true"]{background:var(--accent);color:#100a1c;font-weight:600}
+  .toggle{display:inline-flex;align-items:center;gap:.5rem;font-size:.84rem;color:var(--muted);cursor:pointer;user-select:none}
+  .toggle input{accent-color:var(--accent);width:15px;height:15px}
+  .toolbar .spacer{flex:1}
+
+  .layout{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:22px;align-items:start;padding-bottom:40px}
+  @media(max-width:960px){.layout{grid-template-columns:1fr}}
+
+  .stage{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:14px;position:relative;overflow:hidden}
+  .stage svg{display:block;width:100%;height:auto;touch-action:manipulation}
+  .stage .hint{position:absolute;left:18px;bottom:12px;font-family:var(--mono);font-size:.7rem;color:var(--faint);pointer-events:none}
+
+  /* diagram shapes */
+  .p{fill:var(--body);stroke:var(--body-line);stroke-width:1.4;stroke-linejoin:round;cursor:pointer;transition:fill .15s,stroke .15s}
+  .p.surf{fill:var(--surf)}
+  .p.surf2{fill:var(--surf-2)}
+  .p.glass{fill:#1b2440;stroke:#5b78b8}
+  .p.light-g{fill:#3ecf8e;stroke:#1d6b49}
+  .p.light-r{fill:#ff5a6e;stroke:#7a2531}
+  .p.line{fill:none;stroke:var(--body-line);stroke-width:3;stroke-linecap:round}
+  .hit{fill:none;stroke:transparent;stroke-width:16;cursor:pointer}
+  .p.hov{fill:#4a3b70;stroke:var(--accent)}
+  .p.line.hov{stroke:var(--accent)}
+  .p.on{fill:var(--accent);stroke:#e2d2ff}
+  .p.line.on{stroke:var(--accent)}
+  .p.ok{fill:var(--good);stroke:#c9ffe6}
+  .p.line.ok{stroke:var(--good)}
+  .p.no{fill:var(--bad);stroke:#ffd5da}
+  .p.line.no{stroke:var(--bad)}
+
+  .lbl line{stroke:var(--faint);stroke-width:1}
+  .lbl circle{fill:var(--text)}
+  .lbl text{font-family:var(--sans);font-size:15px;fill:var(--muted);dominant-baseline:middle;cursor:pointer;
+    paint-order:stroke;stroke:var(--panel);stroke-width:4px;stroke-linejoin:round}
+  .lbl.on text,.lbl.hov text{fill:var(--text);font-weight:600}
+  .lbl.on line{stroke:var(--accent)}
+  .labels-off .lbl{display:none}
+
+  .tip{position:fixed;z-index:60;pointer-events:none;background:var(--panel-2);border:1px solid var(--line);color:var(--text);
+    font-size:.8rem;padding:.3rem .6rem;border-radius:7px;white-space:nowrap;opacity:0;transition:opacity .1s;box-shadow:0 8px 20px rgba(0,0,0,.35)}
+  .tip.show{opacity:1}
+
+  /* side panel */
+  .panel{display:flex;flex-direction:column;gap:14px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px}
+  .card h2{font-size:1.25rem;font-weight:800;letter-spacing:-.01em;line-height:1.25}
+  .eyebrow{font-family:var(--mono);font-size:.66rem;text-transform:uppercase;letter-spacing:.09em;color:var(--faint);margin-bottom:6px}
+  .aka{color:var(--faint);font-size:.84rem;margin-top:2px}
+  .card p{color:var(--muted);font-size:.92rem;margin-top:10px}
+  .chips{display:flex;flex-wrap:wrap;gap:.4rem;margin-top:12px}
+  .chip{font-family:var(--mono);font-size:.7rem;color:var(--muted);border:1px solid var(--line);border-radius:6px;padding:.16rem .5rem;background:var(--panel-2)}
+  .chip.axis{color:var(--accent);border-color:rgba(160,107,255,.4);background:var(--accent-soft)}
+  .empty{color:var(--faint);font-size:.9rem}
+
+  .plist{display:flex;flex-direction:column;gap:12px}
+  .pgroup .eyebrow{margin-bottom:6px}
+  .pitems{display:flex;flex-wrap:wrap;gap:.35rem}
+  .pitem{font-size:.8rem;background:var(--panel-2);border:1px solid var(--line);border-radius:999px;padding:.2rem .65rem;cursor:pointer;color:var(--muted);transition:.12s}
+  .pitem:hover{color:var(--text);border-color:var(--accent)}
+  .pitem.on{background:var(--accent);border-color:var(--accent);color:#100a1c;font-weight:600}
+  .pitem.dim{opacity:.45}
+
+  .axes{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:.84rem;margin-top:10px}
+  .axes b{font-family:var(--mono);font-size:.74rem;color:var(--accent);text-transform:uppercase;letter-spacing:.06em;padding-top:2px}
+  .axes span{color:var(--muted)}
+
+  /* quiz */
+  .quiz-q{font-size:.9rem;color:var(--muted)}
+  .quiz-q strong{display:block;font-size:1.45rem;color:var(--text);letter-spacing:-.01em;margin-top:2px}
+  .score{display:flex;gap:18px;margin-top:14px}
+  .score div{font-family:var(--mono);font-size:.7rem;color:var(--faint);text-transform:uppercase;letter-spacing:.08em}
+  .score b{display:block;font-family:var(--sans);font-size:1.4rem;color:var(--accent);letter-spacing:0}
+  .feedback{min-height:1.5em;margin-top:10px;font-size:.9rem}
+  .feedback.ok{color:var(--good)} .feedback.no{color:var(--bad)}
+  .btn-row{display:flex;gap:8px;margin-top:12px}
+  .btn{background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:.42rem .85rem;font-size:.82rem;cursor:pointer;color:var(--muted);transition:.12s}
+  .btn:hover{color:var(--text);border-color:var(--accent)}
+  .btn.primary{background:var(--accent);border-color:var(--accent);color:#100a1c;font-weight:600}
+  .hidden{display:none!important}
+
+  footer{text-align:center;padding:30px;color:var(--faint);font-size:.82rem;border-top:1px solid var(--line-soft)}
+  @media(max-width:600px){.wrap,.nav-inner{padding-left:16px;padding-right:16px}.intro h1{font-size:1.5rem}.brand-name span{display:none}.stage{padding:6px}}
+</style>
+</head>
+<body>
+<header class="nav">
+  <div class="nav-inner">
+    <div class="brand-name">Jacob Cox <span>/ airplane parts</span></div>
+    <a class="back" href="index.html">← Back to portfolio</a>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="intro">
+    <h1>Parts of an airplane</h1>
+    <p>Hover or tap any part of the airliner to learn its proper name and what it does. Switch between the top and side views, then test yourself in quiz mode.</p>
+  </section>
+
+  <div class="toolbar">
+    <div class="seg" role="group" aria-label="View">
+      <button data-view="top" aria-pressed="true">Top view</button>
+      <button data-view="side" aria-pressed="false">Side view</button>
+    </div>
+    <div class="seg" role="group" aria-label="Mode">
+      <button data-mode="explore" aria-pressed="true">Explore</button>
+      <button data-mode="quiz" aria-pressed="false">Quiz</button>
+    </div>
+    <label class="toggle" id="labelToggle"><input type="checkbox" id="showLabels" checked> Show labels</label>
+  </div>
+
+  <div class="layout">
+    <div class="stage" id="stage">
+      <svg id="diagram" role="img" aria-label="Airplane diagram"></svg>
+      <div class="hint" id="hint">click a part</div>
+    </div>
+
+    <aside class="panel">
+      <div class="card" id="detailCard">
+        <div class="eyebrow">Selected part</div>
+        <div id="detail"><div class="empty">Nothing selected yet. Pick a part on the diagram or from the list below.</div></div>
+      </div>
+
+      <div class="card hidden" id="quizCard">
+        <div class="eyebrow">Quiz · <span id="quizView">top view</span></div>
+        <div class="quiz-q">Find the<strong id="quizTarget">—</strong></div>
+        <div class="feedback" id="feedback"></div>
+        <div class="score">
+          <div><b id="sCorrect">0</b>correct</div>
+          <div><b id="sTotal">0</b>tried</div>
+          <div><b id="sStreak">0</b>streak</div>
+        </div>
+        <div class="btn-row">
+          <button class="btn" id="skipBtn">Skip</button>
+          <button class="btn" id="resetBtn">Reset score</button>
+        </div>
+      </div>
+
+      <div class="card" id="listCard">
+        <div class="eyebrow">All parts</div>
+        <div class="plist" id="plist"></div>
+      </div>
+
+      <div class="card">
+        <div class="eyebrow">The three axes</div>
+        <div class="axes">
+          <b>Roll</b><span>Ailerons (helped by spoilers) — tips the wings left or right.</span>
+          <b>Pitch</b><span>Elevators — moves the nose up or down.</span>
+          <b>Yaw</b><span>Rudder — swings the nose left or right.</span>
+        </div>
+      </div>
+    </aside>
+  </div>
+</main>
+
+<div class="tip" id="tip"></div>
+<footer>© <span id="yr"></span> Jacob Cox</footer>
+
+<script>
+(() => {
+  // ---------- part reference ----------
+  const GROUPS = ['Fuselage', 'Wings', 'Tail (empennage)', 'Engines', 'Landing gear'];
+  const PARTS = {
+    fuselage:  { name: 'Fuselage', group: 'Fuselage', desc: 'The main body of the aircraft. It carries the crew, passengers and cargo, and the wings, tail and landing gear all attach to it.' },
+    radome:    { name: 'Nose cone', aka: 'Radome', group: 'Fuselage', desc: 'The rounded nose, made of a radar-transparent composite. It streamlines the front of the aircraft and protects the weather-radar antenna inside.' },
+    flightdeck:{ name: 'Flight deck', aka: 'Cockpit', group: 'Fuselage', desc: 'Where the pilots sit and fly the aircraft. The windscreen panels are heated, multi-layer glass built to survive bird strikes.' },
+    pitot:     { name: 'Pitot tube', group: 'Fuselage', desc: 'A small forward-facing probe near the nose. It measures ram-air pressure, which the instruments turn into airspeed. Airliners carry several for redundancy.' },
+    door:      { name: 'Passenger door', aka: 'Cabin door', group: 'Fuselage', desc: 'The doors used for boarding and emergency exit. Most are "plug" doors: cabin pressure pushes them into the frame, so they cannot open in flight.' },
+    windows:   { name: 'Cabin windows', group: 'Fuselage', desc: 'Small, rounded windows along the passenger cabin. The round corners spread out the stress from pressurisation.' },
+    fairing:   { name: 'Wing-to-body fairing', aka: 'Belly fairing', group: 'Fuselage', desc: 'The smooth bulge where the wings meet the fuselage. It cuts drag and covers the main-gear bays and air-conditioning packs.' },
+    tailcone:  { name: 'Tail cone', aka: 'APU exhaust', group: 'Fuselage', desc: 'The tapered end of the fuselage. It houses the Auxiliary Power Unit (APU), a small turbine that supplies electrical power and air when the main engines are off.' },
+
+    wing:      { name: 'Wing', group: 'Wings', desc: 'Produces the lift that holds the aircraft up. Airliner wings also hold most of the fuel in tanks built into their structure.' },
+    slats:     { name: 'Leading-edge slats', group: 'Wings', tag: 'High-lift device', desc: 'Panels on the front edge of the wing that slide forward and down for takeoff and landing, letting the wing fly slower without stalling.' },
+    flaps:     { name: 'Flaps', group: 'Wings', tag: 'High-lift device', desc: 'Panels on the inner trailing edge that extend back and down. They add lift and drag, so the aircraft can take off and land at lower speeds.' },
+    ailerons:  { name: 'Ailerons', group: 'Wings', tag: 'Primary flight control', axis: 'Roll', desc: 'Hinged surfaces on the outer trailing edge. They move in opposite directions (one up, one down) to roll the aircraft into a bank.' },
+    spoilers:  { name: 'Spoilers', aka: 'Speed brakes', group: 'Wings', tag: 'Secondary flight control', axis: 'Roll (assist)', desc: 'Panels on top of the wing that rise to "spoil" lift and add drag. They slow the aircraft in flight, help the ailerons roll it, and dump lift on touchdown.' },
+    winglet:   { name: 'Winglet', group: 'Wings', desc: 'The upturned tip of the wing. It weakens wingtip vortices, which reduces drag and saves fuel.' },
+    navlights: { name: 'Navigation lights', aka: 'Position lights', group: 'Wings', desc: 'Red on the left (port) wingtip and green on the right (starboard), so other pilots can tell which way the aircraft is heading at night.' },
+
+    hstab:     { name: 'Horizontal stabilizer', aka: 'Tailplane', group: 'Tail (empennage)', desc: 'The small horizontal wing at the tail. It keeps the aircraft stable in pitch, and on airliners the whole surface moves to trim the aircraft.' },
+    elevator:  { name: 'Elevators', group: 'Tail (empennage)', tag: 'Primary flight control', axis: 'Pitch', desc: 'Hinged surfaces on the back of the horizontal stabilizer. Pulling back on the controls raises them, which pitches the nose up.' },
+    vstab:     { name: 'Vertical stabilizer', aka: 'Fin', group: 'Tail (empennage)', desc: 'The tall fin at the tail. Like the feathers on an arrow, it keeps the nose pointed into the airflow (yaw stability).' },
+    rudder:    { name: 'Rudder', group: 'Tail (empennage)', tag: 'Primary flight control', axis: 'Yaw', desc: 'The hinged back of the vertical stabilizer, worked by the pilots\' foot pedals. It swings the nose left or right, and matters most in crosswinds and engine failures.' },
+
+    engine:    { name: 'Engine nacelle', aka: 'Cowling', group: 'Engines', desc: 'The streamlined casing around the turbofan engine. Its panels open on the ground so mechanics can reach the engine.' },
+    inlet:     { name: 'Engine inlet', aka: 'Intake', group: 'Engines', desc: 'The front opening of the nacelle. Its smooth lip delivers even, steady airflow to the fan.' },
+    exhaust:   { name: 'Exhaust nozzle', group: 'Engines', desc: 'The back of the engine, where hot core exhaust and bypass air leave at high speed to produce thrust.' },
+    pylon:     { name: 'Pylon', aka: 'Engine strut', group: 'Engines', desc: 'The strut that hangs the engine below the wing. Fuel lines, wiring and bleed-air ducts run through it.' },
+
+    noseGear:  { name: 'Nose landing gear', group: 'Landing gear', desc: 'The landing gear under the nose. It is steerable, and the pilots use it to steer while taxiing.' },
+    mainGear:  { name: 'Main landing gear', group: 'Landing gear', desc: 'The main wheels under the wings. They carry most of the aircraft\'s weight and hold the brakes. They retract into the belly after takeoff.' },
+  };
+
+  // ---------- geometry helpers ----------
+  // Point at span t (0 root → 1 tip) and chord s (0 leading edge → 1 trailing edge) of a tapered surface.
+  const lerp = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
+  const surface = (le0, le1, te0, te1) => ({
+    at: (t, s) => lerp(lerp(le0, le1, t), lerp(te0, te1, t), s),
+    quad(t0, t1, s0, s1) { return [this.at(t0, s0), this.at(t1, s0), this.at(t1, s1), this.at(t0, s1)]; },
+    outline: [le0, le1, te1, te0],
+  });
+  const pts = arr => arr.map(p => p.map(n => n.toFixed(1)).join(',')).join(' ');
+  const mirror = ([x, y]) => [1000 - x, y];
+
+  // ---------- top view (nose up, plane centred on x=500) ----------
+  const W = surface([522, 268], [840, 430], [522, 392], [855, 465]);
+  const H = surface([525, 560], [665, 612], [522, 626], [676, 632]);
+  const topHalf = [ // drawn on the right wing and mirrored onto the left
+    { part: 'engine', el: 'rect', a: { x: 623, y: 245, width: 30, height: 100, rx: 14 } },
+    { part: 'wing', poly: W.outline },
+    { part: 'slats', poly: W.quad(.18, .95, 0, .12), cls: 'surf' },
+    { part: 'spoilers', poly: W.quad(.16, .6, .6, .76), cls: 'surf2' },
+    { part: 'flaps', poly: W.quad(.04, .62, .78, 1), cls: 'surf' },
+    { part: 'ailerons', poly: W.quad(.66, .93, .76, 1), cls: 'surf' },
+    { part: 'winglet', poly: [[840, 430], [852, 428], [868, 462], [855, 465]], cls: 'surf2' },
+    { part: 'hstab', poly: H.outline },
+    { part: 'elevator', poly: H.quad(.04, .97, .62, 1), cls: 'surf' },
+  ];
+  const TOP = {
+    viewBox: '-40 0 1080 700',
+    halves: topHalf,
+    shapes: [
+      { part: 'fuselage', d: 'M500,40 C520,45 530,90 530,140 L530,560 C530,600 515,640 500,662 C485,640 470,600 470,560 L470,140 C470,90 480,45 500,40 Z' },
+      { part: 'radome', d: 'M500,40 C514,44 522,60 525,76 Q500,70 475,76 C478,60 486,44 500,40 Z', cls: 'surf' },
+      { part: 'flightdeck', d: 'M482,100 Q500,86 518,100 L516,108 Q500,97 484,108 Z', cls: 'glass' },
+      { part: 'vstab', d: 'M496,540 L504,540 L505,650 L500,670 L495,650 Z', cls: 'surf2' },
+      { part: 'navlights', el: 'circle', a: { cx: 845, cy: 436, r: 5 }, cls: 'light-g' },
+      { part: 'navlights', el: 'circle', a: { cx: 155, cy: 436, r: 5 }, cls: 'light-r' },
+    ],
+    labels: [
+      { part: 'radome', a: [500, 58], l: [570, 38] },
+      { part: 'flightdeck', a: [500, 99], l: [420, 92], end: true },
+      { part: 'fuselage', a: [500, 200], l: [420, 190], end: true },
+      { part: 'engine', a: [638, 262], l: [700, 222] },
+      { part: 'slats', a: W.at(.8, .06), l: [860, 375] },
+      { part: 'winglet', a: [858, 450], l: [905, 440] },
+      { part: 'ailerons', a: W.at(.8, .88), l: [860, 515] },
+      { part: 'flaps', a: W.at(.33, .9), l: [690, 520] },
+      { part: 'hstab', a: H.at(.5, .3), l: [720, 585] },
+      { part: 'elevator', a: H.at(.6, .82), l: [720, 650] },
+      { part: 'wing', a: mirror(W.at(.5, .4)), l: [170, 300], end: true },
+      { part: 'spoilers', a: mirror(W.at(.4, .68)), l: [200, 505], end: true },
+      { part: 'navlights', a: [155, 436], l: [95, 405], end: true },
+      { part: 'vstab', a: [500, 625], l: [420, 682], end: true },
+    ],
+  };
+
+  // ---------- side view (nose left) ----------
+  const F = surface([630, 164], [750, 42], [812, 178], [796, 42]);
+  const windows = [];
+  for (let x = 178; x <= 624; x += 16) windows.push(`M${x},181 h8 v11 h-8 Z`);
+  const SIDE = {
+    viewBox: '-80 20 1090 370',
+    halves: [],
+    shapes: [
+      { part: 'vstab', poly: F.outline },
+      { part: 'rudder', poly: F.quad(.03, 1, .66, 1), cls: 'surf' },
+      { part: 'fuselage', d: 'M40,205 C40,180 70,164 125,163 L700,163 C760,164 800,172 826,179 L826,197 C790,204 720,232 650,236 L130,236 C80,236 40,226 40,205 Z' },
+      { part: 'windows', d: windows.join(' '), cls: 'glass' },
+      { part: 'door', el: 'rect', a: { x: 146, y: 170, width: 17, height: 44, rx: 4 }, cls: 'surf' },
+      { part: 'door', el: 'rect', a: { x: 636, y: 170, width: 16, height: 40, rx: 4 }, cls: 'surf' },
+      { part: 'radome', d: 'M82,165 C58,170 40,186 40,205 C40,221 56,233 82,235 C72,215 72,185 82,165 Z', cls: 'surf' },
+      { part: 'flightdeck', d: 'M92,188 L104,174 L128,172 L128,186 Z', cls: 'glass' },
+      { part: 'pitot', d: 'M86,208 L86,214 L62,214', cls: 'line' },
+      { part: 'tailcone', d: 'M822,179 L856,186 L858,190 L822,197 Z', cls: 'surf2' },
+      { part: 'hstab', poly: [[690, 199], [762, 188], [812, 188], [812, 196], [770, 202]] },
+      { part: 'elevator', poly: [[790, 188], [812, 188], [812, 196], [790, 198]], cls: 'surf' },
+      { part: 'fairing', d: 'M296,234 C340,254 500,256 548,234 Z', cls: 'surf2' },
+      { part: 'wing', poly: [[300, 227], [560, 222], [600, 226], [560, 232], [320, 236]] },
+      { part: 'winglet', d: 'M585,227 L604,172 L616,172 L600,229 Z', cls: 'surf2' },
+      { part: 'pylon', d: 'M335,247 L352,231 L455,226 L405,248 Z', cls: 'surf2' },
+      { part: 'noseGear', d: 'M117,236 h6 v62 h-6 Z M120,306 m-11,0 a11,11 0 1,0 22,0 a11,11 0 1,0 -22,0' },
+      { part: 'mainGear', d: 'M467,246 h6 v52 h-6 Z M457,304 m-13,0 a13,13 0 1,0 26,0 a13,13 0 1,0 -26,0 M483,304 m-13,0 a13,13 0 1,0 26,0 a13,13 0 1,0 -26,0' },
+      { part: 'engine', el: 'rect', a: { x: 292, y: 246, width: 108, height: 40, rx: 18 } },
+      { part: 'inlet', el: 'ellipse', a: { cx: 295, cy: 266, rx: 7, ry: 19 }, cls: 'surf' },
+      { part: 'exhaust', d: 'M400,254 L428,262 L428,270 L400,278 Z', cls: 'surf2' },
+    ],
+    labels: [
+      { part: 'radome', a: [55, 205], l: [10, 205], end: true },
+      { part: 'pitot', a: [64, 214], l: [30, 252], end: true },
+      { part: 'flightdeck', a: [112, 180], l: [90, 128], end: true },
+      { part: 'door', a: [154, 192], l: [170, 108] },
+      { part: 'windows', a: [330, 186], l: [330, 128] },
+      { part: 'fuselage', a: [470, 212], l: [480, 140] },
+      { part: 'winglet', a: [608, 190], l: [600, 118] },
+      { part: 'vstab', a: [720, 110], l: [640, 60], end: true },
+      { part: 'rudder', a: [795, 100], l: [850, 80] },
+      { part: 'tailcone', a: [845, 188], l: [880, 158] },
+      { part: 'elevator', a: [802, 193], l: [880, 218] },
+      { part: 'hstab', a: [740, 196], l: [760, 265] },
+      { part: 'wing', a: [560, 226], l: [640, 240] },
+      { part: 'pylon', a: [400, 238], l: [560, 270] },
+      { part: 'fairing', a: [430, 247], l: [560, 300] },
+      { part: 'inlet', a: [289, 266], l: [230, 282], end: true },
+      { part: 'noseGear', a: [120, 306], l: [120, 345] },
+      { part: 'engine', a: [345, 280], l: [330, 345] },
+      { part: 'mainGear', a: [483, 304], l: [520, 345] },
+      { part: 'exhaust', a: [420, 268], l: [445, 372] },
+    ],
+  };
+  const VIEWS = { top: TOP, side: SIDE };
+  const partsIn = v => [...new Set([...v.halves, ...v.shapes].map(s => s.part))];
+
+  // ---------- rendering ----------
+  const svg = document.getElementById('diagram');
+  const NS = 'http://www.w3.org/2000/svg';
+  const make = (tag, attrs) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); return e; };
+  function shapeEl(s) {
+    let e;
+    if (s.poly) e = make('polygon', { points: pts(s.poly) });
+    else if (s.d) e = make('path', { d: s.d });
+    else e = make(s.el, s.a);
+    e.setAttribute('class', 'p ' + (s.cls || ''));
+    e.dataset.part = s.part;
+    return e;
+  }
+  function render() {
+    const v = VIEWS[state.view];
+    svg.replaceChildren();
+    svg.setAttribute('viewBox', v.viewBox);
+    const plane = make('g', {});
+    const half = make('g', {}), mirrored = make('g', { transform: 'translate(1000,0) scale(-1,1)' });
+    v.halves.forEach(s => { mirrored.appendChild(shapeEl(s)); half.appendChild(shapeEl(s)); });
+    plane.append(mirrored, half);
+    v.shapes.forEach(s => {
+      plane.appendChild(shapeEl(s));
+      if (s.cls === 'line') { const h = shapeEl(s); h.setAttribute('class', 'hit'); plane.appendChild(h); }
+    });
+    svg.appendChild(plane);
+    const labels = make('g', {});
+    v.labels.forEach(L => {
+      const g = make('g', { class: 'lbl' }); g.dataset.part = L.part;
+      g.appendChild(make('line', { x1: L.a[0], y1: L.a[1], x2: L.l[0], y2: L.l[1] }));
+      g.appendChild(make('circle', { cx: L.a[0], cy: L.a[1], r: 2.5 }));
+      const t = make('text', { x: L.l[0] + (L.end ? -5 : 5), y: L.l[1], 'text-anchor': L.end ? 'end' : 'start' });
+      t.textContent = PARTS[L.part].name; t.dataset.part = L.part;
+      g.appendChild(t); labels.appendChild(g);
+    });
+    svg.appendChild(labels);
+    paint();
+  }
+  function mark(cls, id) {
+    svg.querySelectorAll('.' + cls).forEach(e => e.classList.remove(cls));
+    if (id) svg.querySelectorAll(`[data-part="${id}"]`).forEach(e => (e.classList.contains('lbl') || e.classList.contains('p')) && e.classList.add(cls));
+  }
+  function paint() {
+    mark('on', state.mode === 'explore' ? state.selected : null);
+    mark('hov', state.hover);
+    stage.classList.toggle('labels-off', state.mode === 'quiz' || !state.showLabels);
+    const here = partsIn(VIEWS[state.view]);
+    document.querySelectorAll('.pitem').forEach(b => {
+      b.classList.toggle('on', b.dataset.part === state.selected);
+      b.classList.toggle('dim', !here.includes(b.dataset.part));
+    });
+  }
+
+  // ---------- details ----------
+  const detail = document.getElementById('detail');
+  function showDetail(id) {
+    const p = PARTS[id];
+    const views = Object.keys(VIEWS).filter(k => partsIn(VIEWS[k]).includes(id)).map(k => k + ' view');
+    detail.innerHTML = `<h2>${p.name}</h2>${p.aka ? `<div class="aka">also called: ${p.aka}</div>` : ''}
+      <p>${p.desc}</p>
+      <div class="chips">${p.axis ? `<span class="chip axis">controls ${p.axis.toLowerCase()}</span>` : ''}
+        <span class="chip">${p.group}</span>${p.tag ? `<span class="chip">${p.tag}</span>` : ''}
+        <span class="chip">${views.join(' · ')}</span></div>`;
+  }
+
+  // ---------- parts list ----------
+  const plist = document.getElementById('plist');
+  GROUPS.forEach(g => {
+    const wrap = document.createElement('div'); wrap.className = 'pgroup';
+    wrap.innerHTML = `<div class="eyebrow">${g}</div><div class="pitems"></div>`;
+    Object.entries(PARTS).filter(([, p]) => p.group === g).forEach(([id, p]) => {
+      const b = document.createElement('button'); b.className = 'pitem'; b.dataset.part = id; b.textContent = p.name;
+      b.addEventListener('click', () => {
+        if (!partsIn(VIEWS[state.view]).includes(id)) setView(Object.keys(VIEWS).find(k => partsIn(VIEWS[k]).includes(id)));
+        select(id);
+      });
+      wrap.querySelector('.pitems').appendChild(b);
+    });
+    plist.appendChild(wrap);
+  });
+
+  // ---------- state & interaction ----------
+  const stage = document.getElementById('stage');
+  const tip = document.getElementById('tip');
+  const state = { view: 'top', mode: 'explore', selected: null, hover: null, showLabels: true,
+    quiz: { target: null, correct: 0, total: 0, streak: 0, locked: false, missed: false } };
+
+  function select(id) { state.selected = id; showDetail(id); paint(); }
+  function setView(v) {
+    state.view = v;
+    document.querySelectorAll('[data-view]').forEach(b => b.setAttribute('aria-pressed', b.dataset.view === v));
+    render();
+    if (state.mode === 'quiz') nextQuestion();
+  }
+  function setMode(m) {
+    state.mode = m;
+    document.querySelectorAll('[data-mode]').forEach(b => b.setAttribute('aria-pressed', b.dataset.mode === m));
+    const quiz = m === 'quiz';
+    document.getElementById('quizCard').classList.toggle('hidden', !quiz);
+    document.getElementById('listCard').classList.toggle('hidden', quiz);
+    document.getElementById('detailCard').classList.toggle('hidden', quiz);
+    document.getElementById('labelToggle').classList.toggle('hidden', quiz);
+    document.getElementById('hint').textContent = quiz ? 'click the part named in the quiz' : 'click a part';
+    if (quiz) nextQuestion(); else { mark('ok'); mark('no'); }
+    paint();
+  }
+
+  const partAt = e => e.target.closest && e.target.closest('[data-part]')?.dataset.part;
+  svg.addEventListener('pointermove', e => {
+    const id = partAt(e);
+    if (id !== state.hover) { state.hover = id; mark('hov', id); }
+    if (id && state.mode === 'explore' && e.pointerType === 'mouse') {
+      tip.textContent = PARTS[id].name; tip.classList.add('show');
+      tip.style.left = (e.clientX + 14) + 'px'; tip.style.top = (e.clientY + 14) + 'px';
+    } else tip.classList.remove('show');
+  });
+  svg.addEventListener('pointerleave', () => { state.hover = null; mark('hov'); tip.classList.remove('show'); });
+  svg.addEventListener('click', e => {
+    const id = partAt(e);
+    if (!id) return;
+    if (state.mode === 'explore') select(id); else answer(id);
+  });
+
+  // ---------- quiz ----------
+  const q = state.quiz;
+  const fb = document.getElementById('feedback');
+  function nextQuestion() {
+    const pool = partsIn(VIEWS[state.view]).filter(id => id !== q.target);
+    q.target = pool[Math.floor(Math.random() * pool.length)];
+    q.locked = false; q.missed = false;
+    document.getElementById('quizTarget').textContent = PARTS[q.target].name;
+    document.getElementById('quizView').textContent = state.view + ' view';
+    fb.textContent = ''; fb.className = 'feedback';
+    mark('ok'); mark('no');
+  }
+  function updateScore() {
+    document.getElementById('sCorrect').textContent = q.correct;
+    document.getElementById('sTotal').textContent = q.total;
+    document.getElementById('sStreak').textContent = q.streak;
+  }
+  function answer(id) {
+    if (q.locked) return;
+    if (id === q.target) {
+      if (!q.missed) { q.correct++; q.streak++; }
+      q.total++; q.locked = true;
+      mark('no'); mark('ok', id);
+      fb.textContent = q.missed ? `That's the ${PARTS[id].name}.` : `Correct — ${PARTS[id].name}!`;
+      fb.className = 'feedback ok';
+      updateScore();
+      setTimeout(nextQuestion, 1100);
+    } else {
+      q.missed = true; q.streak = 0;
+      mark('no', id);
+      fb.textContent = `No, that's the ${PARTS[id].name}. Try again.`;
+      fb.className = 'feedback no';
+      updateScore();
+    }
+  }
+  document.getElementById('skipBtn').addEventListener('click', () => {
+    if (q.locked) return;
+    q.locked = true; q.total++; q.streak = 0; updateScore();
+    mark('no'); mark('ok', q.target);
+    fb.textContent = `Here's the ${PARTS[q.target].name}.`; fb.className = 'feedback';
+    setTimeout(nextQuestion, 1400);
+  });
+  document.getElementById('resetBtn').addEventListener('click', () => { q.correct = q.total = q.streak = 0; updateScore(); });
+
+  document.querySelectorAll('[data-view]').forEach(b => b.addEventListener('click', () => setView(b.dataset.view)));
+  document.querySelectorAll('[data-mode]').forEach(b => b.addEventListener('click', () => setMode(b.dataset.mode)));
+  document.getElementById('showLabels').addEventListener('change', e => { state.showLabels = e.target.checked; paint(); });
+  document.getElementById('yr').textContent = new Date().getFullYear();
+
+  render();
+})();
+</script>
+</body>
+</html>
