@@ -114,8 +114,24 @@
   .axes span{color:var(--muted)}
 
   /* quiz */
-  .quiz-q{font-size:.9rem;color:var(--muted)}
-  .quiz-q strong{display:block;font-size:1.45rem;color:var(--text);letter-spacing:-.01em;margin-top:2px}
+  .quiz-card h2{margin-top:4px}
+  .seg-sm button{padding:.22rem .6rem;font-size:.74rem}
+  .q-quote{margin-top:10px;padding:10px 14px;border-left:3px solid var(--accent);background:var(--panel-2);border-radius:0 10px 10px 0;color:var(--text);font-size:.92rem}
+  .q-sub{font-size:.84rem;color:var(--faint);margin-top:6px}
+  .q-sub:empty{display:none}
+  .q-opts{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+  .q-opts:empty{display:none}
+  .q-opts.long{grid-template-columns:1fr}
+  .q-opt{text-align:left;background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:.55rem .8rem;font-size:.88rem;line-height:1.4;color:var(--text);cursor:pointer;transition:border-color .12s,background .12s}
+  .q-opt:hover:not(:disabled){border-color:var(--accent)}
+  .q-opt:disabled{cursor:default}
+  .q-opt.ok{border-color:var(--good);background:rgba(62,207,142,.14)}
+  .q-opt.no{border-color:var(--bad);background:rgba(255,107,122,.14)}
+  .q-explain{color:var(--muted);font-size:.88rem;margin-top:2px}
+  .q-foot{display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:10px;margin-top:6px}
+  .q-foot .score{margin-top:0}
+  .q-foot .btn-row{margin-top:0}
+  @media(max-width:700px){.q-opts{grid-template-columns:1fr}}
   .score{display:flex;gap:18px;margin-top:14px}
   .score div{font-family:var(--mono);font-size:.7rem;color:var(--faint);text-transform:uppercase;letter-spacing:.08em}
   .score b{display:block;font-family:var(--sans);font-size:1.4rem;color:var(--accent);letter-spacing:0}
@@ -161,8 +177,8 @@
   .step-card.is-done h2::after{content:' ✓';color:var(--good)}
   .btn:disabled{opacity:.4;cursor:default}
   .btn-row .btn.primary{margin-left:auto}
-  /* shorter diagram in preflight so the step card fits on screen with it */
-  .pf-mode .stage svg{max-height:min(48vh,440px)}
+  /* shorter diagram in quiz and preflight so the card below fits on screen with it */
+  .compact .stage svg{max-height:min(48vh,440px)}
   @media(max-width:700px){.step-grid{grid-template-columns:1fr}.pf-list{max-height:300px}.stage .hint{display:none}}
 
   footer{text-align:center;padding:30px;color:var(--faint);font-size:.82rem;border-top:1px solid var(--line-soft)}
@@ -180,7 +196,7 @@
 <main class="wrap">
   <section class="intro">
     <h1>Parts of an airplane</h1>
-    <p>Pick an aircraft, then hover or tap any part to learn its proper name and what it does. Switch between the top and side views, test yourself in quiz mode, or walk around the aircraft with a preflight checklist.</p>
+    <p>Pick an aircraft, then hover or tap any part to learn its proper name and what it does. Switch between the top and side views, test yourself with a quiz on both the parts and the preflight checks, or walk around the aircraft with a preflight checklist.</p>
   </section>
 
   <div class="model-row">
@@ -223,27 +239,41 @@
           <button class="btn primary" id="pfNext"></button>
         </div>
       </div>
+
+      <div class="card quiz-card hidden" id="quizCard">
+        <div class="step-top">
+          <div class="eyebrow" id="qTag"></div>
+          <div class="seg seg-sm" role="group" aria-label="Question types">
+            <button data-mix="all" aria-pressed="true">Everything</button>
+            <button data-mix="parts" aria-pressed="false">Parts</button>
+            <button data-mix="preflight" aria-pressed="false">Preflight</button>
+          </div>
+        </div>
+        <h2 id="qText"></h2>
+        <div class="q-quote hidden" id="qQuote"></div>
+        <div class="q-sub" id="qSub"></div>
+        <div class="q-opts" id="qOpts"></div>
+        <div class="feedback" id="feedback"></div>
+        <p class="q-explain hidden" id="qExplain"></p>
+        <div class="q-foot">
+          <div class="score">
+            <div><b id="sCorrect">0</b>correct</div>
+            <div><b id="sTotal">0</b>tried</div>
+            <div><b id="sStreak">0</b>streak</div>
+          </div>
+          <div class="btn-row">
+            <button class="btn" id="resetBtn">Reset score</button>
+            <button class="btn" id="skipBtn">Skip</button>
+            <button class="btn primary hidden" id="nextBtn">Next question →</button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <aside class="panel">
       <div class="card" id="detailCard">
         <div class="eyebrow">Selected part</div>
         <div id="detail"><div class="empty">Nothing selected yet. Pick a part on the diagram or from the list below.</div></div>
-      </div>
-
-      <div class="card hidden" id="quizCard">
-        <div class="eyebrow">Quiz · <span id="quizView">top view</span></div>
-        <div class="quiz-q">Find the<strong id="quizTarget">—</strong></div>
-        <div class="feedback" id="feedback"></div>
-        <div class="score">
-          <div><b id="sCorrect">0</b>correct</div>
-          <div><b id="sTotal">0</b>tried</div>
-          <div><b id="sStreak">0</b>streak</div>
-        </div>
-        <div class="btn-row">
-          <button class="btn" id="skipBtn">Skip</button>
-          <button class="btn" id="resetBtn">Reset score</button>
-        </div>
       </div>
 
       <div class="card hidden" id="pfCard">
@@ -890,7 +920,11 @@
     if (id) svg.querySelectorAll(`[data-part="${id}"]`).forEach(e => (e.classList.contains('lbl') || e.classList.contains('p')) && e.classList.add(cls));
   }
   function paint() {
-    mark('on', state.mode === 'explore' ? state.selected : state.mode === 'preflight' ? pfCurrent()?.part : null);
+    const c = state.mode === 'quiz' ? state.quiz.cur : null;
+    mark('on', state.mode === 'explore' ? state.selected : state.mode === 'preflight' ? pfCurrent()?.part
+      : c && c.highlight && !c.answered ? c.part : null);
+    mark('ok', c && c.answered ? c.part : null);
+    mark('no', c && c.answered ? c.wrongPart : null);
     mark('hov', state.hover);
     stage.classList.toggle('labels-off', state.mode === 'quiz' || !state.showLabels);
     const here = partsIn(view());
@@ -948,7 +982,7 @@
   const stage = document.getElementById('stage');
   const tip = document.getElementById('tip');
   const state = { model: 'airliner', view: 'top', mode: 'explore', selected: null, hover: null, showLabels: true,
-    quiz: { target: null, correct: 0, total: 0, streak: 0, locked: false, missed: false } };
+    quiz: { cur: null, correct: 0, total: 0, streak: 0, mix: 'all', recent: [] } };
 
   function select(id) { state.selected = id; showDetail(id); paint(); }
 
@@ -1040,26 +1074,22 @@
     select(state.selected && modelParts().has(state.selected) ? state.selected : null);
     setView(state.view);
     if (state.mode === 'preflight') pfFocus(pf.cur);
+    if (state.mode === 'quiz') newQuestion();
   }
-  function setView(v) {
-    state.view = v;
-    document.querySelectorAll('[data-view]').forEach(b => b.setAttribute('aria-pressed', b.dataset.view === v));
-    render();
-    if (state.mode === 'quiz') nextQuestion();
-  }
+  function setView(v) { showView(v); }
   function setMode(m) {
     state.mode = m;
     document.querySelectorAll('[data-mode]').forEach(b => b.setAttribute('aria-pressed', b.dataset.mode === m));
     const quiz = m === 'quiz', preflight = m === 'preflight';
-    document.body.classList.toggle('pf-mode', preflight);
+    document.body.classList.toggle('compact', quiz || preflight);
     document.getElementById('quizCard').classList.toggle('hidden', !quiz);
     document.getElementById('pfCard').classList.toggle('hidden', !preflight);
     document.getElementById('pfStep').classList.toggle('hidden', !preflight);
     document.getElementById('listCard').classList.toggle('hidden', m !== 'explore');
     document.getElementById('detailCard').classList.toggle('hidden', m !== 'explore');
     document.getElementById('labelToggle').classList.toggle('hidden', quiz);
-    document.getElementById('hint').textContent = quiz ? 'click the part named in the quiz' : preflight ? 'click a part to jump to its check' : 'click a part';
-    if (quiz) nextQuestion(); else { mark('ok'); mark('no'); }
+    document.getElementById('hint').textContent = quiz ? 'answer the question below' : preflight ? 'click a part to jump to its check' : 'click a part';
+    if (quiz) newQuestion();
     if (preflight) pfFocus(pf.cur);
     paint();
   }
@@ -1078,58 +1108,131 @@
     const id = partAt(e);
     if (!id) return;
     if (state.mode === 'explore') select(id);
-    else if (state.mode === 'quiz') answer(id);
+    else if (state.mode === 'quiz') { if (q.cur && !q.cur.options) answer(id); }
     else {
       const i = pfItems().findIndex(it => it.part === id);
       if (i >= 0) pfFocus(i);
     }
   });
 
-  // ---------- quiz ----------
+  // ---------- quiz: mixes part questions (from Explore) with walkaround questions (from Preflight) ----------
   const q = state.quiz;
   const fb = document.getElementById('feedback');
-  let pending = null;
-  function nextQuestion() {
-    clearTimeout(pending);
-    const pool = partsIn(view()).filter(id => id !== q.target);
-    q.target = pool[Math.floor(Math.random() * pool.length)];
-    q.locked = false; q.missed = false;
-    document.getElementById('quizTarget').textContent = PARTS[q.target].name;
-    document.getElementById('quizView').textContent = `${model().name.toLowerCase()} · ${state.view} view`;
-    fb.textContent = ''; fb.className = 'feedback';
-    mark('ok'); mark('no');
+  const QUIZ_TYPES = { all: ['find', 'name', 'desc', 'pfPart', 'pfWhy'], parts: ['find', 'name', 'desc'], preflight: ['pfPart', 'pfWhy'] };
+  const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+  const shuffle = arr => { const a = [...arr]; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  const mentions = (text, id) => text.toLowerCase().includes(PARTS[id].name.toLowerCase());
+  // three wrong part names, favouring parts from the same group so the choice isn't obvious
+  function partOptions(answer) {
+    const others = shuffle([...modelParts()].filter(id => id !== answer && PARTS[id].name !== PARTS[answer].name));
+    const same = others.filter(id => PARTS[id].group === PARTS[answer].group);
+    const wrong = [...new Set([...same.slice(0, 2), ...others])].slice(0, 3);
+    return shuffle([answer, ...wrong]).map(id => ({ label: PARTS[id].name, correct: id === answer }));
   }
-  function updateScore() {
+  function showView(v) {
+    state.view = v;
+    document.querySelectorAll('[data-view]').forEach(b => b.setAttribute('aria-pressed', b.dataset.view === v));
+    render();
+  }
+  const showPart = id => { if (!partsIn(view()).includes(id)) showView(viewsWith(id)[0]); };
+
+  // steps that are about the cockpit or the whole aircraft rather than the part they light up
+  const NOT_PART_QUESTIONS = ['Paperwork', 'Control lock removed', 'Ignition off, key out', 'Master on: fuel gauges', 'Tail tie-down',
+    'Ejection seat', 'Right side', 'Left wing surfaces', 'Big-picture look'];
+  const GENERATORS = {
+    find() {
+      const id = pick([...modelParts()]);
+      return { kind: 'Parts', key: 'find' + id, part: id, text: `Find the ${PARTS[id].name}`, sub: 'Tap it on the diagram. You can switch between top and side view.', explain: PARTS[id].desc };
+    },
+    name() {
+      const id = pick([...modelParts()]);
+      return { kind: 'Parts', key: 'name' + id, part: id, highlight: true, text: 'What is the highlighted part called?', options: partOptions(id), explain: PARTS[id].desc };
+    },
+    desc() {
+      const ids = [...modelParts()].filter(id => !mentions(PARTS[id].desc, id));
+      const id = pick(ids);
+      return { kind: 'Parts', key: 'desc' + id, part: id, text: 'Which part does this describe?', quote: PARTS[id].desc, options: partOptions(id) };
+    },
+    pfPart() {
+      const items = pfItems().filter(it => !mentions(it.check, it.part) && !NOT_PART_QUESTIONS.includes(it.title));
+      const it = pick(items);
+      return { kind: 'Preflight', key: 'pfPart' + it.title, part: it.part, text: 'On the walkaround, which part are you inspecting?', quote: it.check, options: partOptions(it.part), explain: `${it.title}: ${it.why}` };
+    },
+    pfWhy() {
+      const items = pfItems();
+      const it = pick(items);
+      const wrong = shuffle([...new Set(items.filter(o => o.why !== it.why).map(o => o.why))]).slice(0, 3);
+      return { kind: 'Preflight', key: 'pfWhy' + it.title, part: it.part, highlight: true, long: true, text: `Why do you check: ${it.title}?`,
+        options: shuffle([it.why, ...wrong]).map(w => ({ label: w, correct: w === it.why })), explain: `What to check: ${it.check}` };
+    },
+  };
+
+  function newQuestion() {
+    let cur;
+    for (let tries = 0; tries < 8; tries++) {   // avoid repeating a recent question
+      cur = GENERATORS[pick(QUIZ_TYPES[q.mix])]();
+      if (!q.recent.includes(cur.key)) break;
+    }
+    q.recent = [cur.key, ...q.recent].slice(0, 8);
+    q.cur = { ...cur, answered: false, wrongPart: null };
+    if (cur.highlight) showPart(cur.part);
+    renderQuestion();
+    paint();
+  }
+  function renderQuestion() {
+    const c = q.cur;
+    document.getElementById('qTag').textContent = `${c.kind} question · ${model().name.toLowerCase()}`;
+    document.getElementById('qText').textContent = c.text;
+    const quote = document.getElementById('qQuote');
+    quote.textContent = c.quote || ''; quote.classList.toggle('hidden', !c.quote);
+    document.getElementById('qSub').textContent = c.sub || '';
+    const opts = document.getElementById('qOpts');
+    opts.classList.toggle('long', !!c.long);
+    opts.replaceChildren(...(c.options || []).map((o, i) => {
+      const b = document.createElement('button');
+      b.className = 'q-opt'; b.textContent = o.label; b.disabled = c.answered;
+      if (c.answered && o.correct) b.classList.add('ok');
+      if (c.answered && c.choice === i && !o.correct) b.classList.add('no');
+      b.addEventListener('click', () => answer(i));
+      return b;
+    }));
+    fb.textContent = !c.answered ? '' : c.right ? 'Correct!' : c.skipped ? 'Skipped. The answer is shown in green.' : 'Not quite. The right answer is shown in green.';
+    fb.className = 'feedback' + (c.answered && !c.skipped ? (c.right ? ' ok' : ' no') : '');
+    const ex = document.getElementById('qExplain');
+    ex.textContent = c.explain || ''; ex.classList.toggle('hidden', !c.answered || !c.explain);
+    document.getElementById('skipBtn').classList.toggle('hidden', c.answered);
+    document.getElementById('nextBtn').classList.toggle('hidden', !c.answered);
     document.getElementById('sCorrect').textContent = q.correct;
     document.getElementById('sTotal').textContent = q.total;
     document.getElementById('sStreak').textContent = q.streak;
   }
-  function answer(id) {
-    if (q.locked) return;
-    if (id === q.target) {
-      if (!q.missed) { q.correct++; q.streak++; }
-      q.total++; q.locked = true;
-      mark('no'); mark('ok', id);
-      fb.textContent = q.missed ? `That's the ${PARTS[id].name}.` : `Correct — ${PARTS[id].name}!`;
-      fb.className = 'feedback ok';
-      updateScore();
-      pending = setTimeout(nextQuestion, 1100);
-    } else {
-      q.missed = true; q.streak = 0;
-      mark('no', id);
-      fb.textContent = `No, that's the ${PARTS[id].name}. Try again.`;
-      fb.className = 'feedback no';
-      updateScore();
-    }
+  // choice is an option index, or a part id when tapping the diagram
+  function answer(choice) {
+    const c = q.cur;
+    if (!c || c.answered) return;
+    const right = c.options ? c.options[choice].correct : choice === c.part;
+    if (!c.options && !right) c.wrongPart = choice;
+    Object.assign(c, { answered: true, right, choice });
+    q.total++;
+    if (right) { q.correct++; q.streak++; } else q.streak = 0;
+    showPart(c.part);
+    renderQuestion(); paint();
   }
   document.getElementById('skipBtn').addEventListener('click', () => {
-    if (q.locked) return;
-    q.locked = true; q.total++; q.streak = 0; updateScore();
-    mark('no'); mark('ok', q.target);
-    fb.textContent = `Here's the ${PARTS[q.target].name}.`; fb.className = 'feedback';
-    pending = setTimeout(nextQuestion, 1400);
+    const c = q.cur;
+    if (!c || c.answered) return;
+    Object.assign(c, { answered: true, right: false, skipped: true });
+    q.total++; q.streak = 0;
+    showPart(c.part);
+    renderQuestion(); paint();
   });
-  document.getElementById('resetBtn').addEventListener('click', () => { q.correct = q.total = q.streak = 0; updateScore(); });
+  document.getElementById('nextBtn').addEventListener('click', newQuestion);
+  document.getElementById('resetBtn').addEventListener('click', () => { q.correct = q.total = q.streak = 0; renderQuestion(); });
+  document.querySelectorAll('[data-mix]').forEach(b => b.addEventListener('click', () => {
+    q.mix = b.dataset.mix;
+    document.querySelectorAll('[data-mix]').forEach(x => x.setAttribute('aria-pressed', x === b));
+    newQuestion();
+  }));
 
   document.querySelectorAll('[data-view]').forEach(b => b.addEventListener('click', () => setView(b.dataset.view)));
   document.querySelectorAll('[data-mode]').forEach(b => b.addEventListener('click', () => setMode(b.dataset.mode)));
