@@ -1,5 +1,5 @@
 // Offline cache for the airplane parts app. Bump VERSION when any cached file changes.
-const VERSION = 'airplane-v4';
+const VERSION = 'airplane-v5';
 const FILES = [
   './airplane.html',
   './airplane.webmanifest',

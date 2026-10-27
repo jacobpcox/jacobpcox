@@ -118,6 +118,16 @@
   .seg-sm button{padding:.22rem .6rem;font-size:.74rem}
   .q-quote{margin-top:10px;padding:10px 14px;border-left:3px solid var(--accent);background:var(--panel-2);border-radius:0 10px 10px 0;color:var(--text);font-size:.92rem}
   .q-sub{font-size:.84rem;color:var(--faint);margin-top:6px}
+  /* animated control-surface views for movement questions */
+  .mv{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:12px}
+  .mv figure{flex:1;min-width:0;max-width:190px;margin:0;background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:6px 6px 4px}
+  .mv svg{display:block;width:100%;height:auto;overflow:visible}
+  .mv figcaption{font-family:var(--mono);font-size:.6rem;text-transform:uppercase;letter-spacing:.08em;color:var(--faint);text-align:center}
+  .mv .mv-s{fill:var(--body);stroke:var(--body-line);stroke-width:.8}
+  .mv .mv-c{fill:var(--accent)}
+  .mv .mv-c,.mv g{transform-box:view-box;transition:transform .5s ease,opacity .3s}
+  .mv .mv-body{transition:transform .9s ease .5s}
+  .mv.mv-instant *{transition:none!important}
   .q-sub:empty{display:none}
   .q-opts{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
   .q-opts:empty{display:none}
@@ -131,7 +141,7 @@
   .q-foot{display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:10px;margin-top:6px}
   .q-foot .score{margin-top:0}
   .q-foot .btn-row{margin-top:0}
-  @media(max-width:700px){.q-opts{grid-template-columns:1fr}}
+  @media(max-width:700px){.q-opts{grid-template-columns:1fr}.mv{gap:6px}.mv figure{flex:1 1 0;padding:4px 3px 2px}.mv .mv-replay{flex-basis:100%}}
   .score{display:flex;gap:18px;margin-top:14px}
   .score div{font-family:var(--mono);font-size:.7rem;color:var(--faint);text-transform:uppercase;letter-spacing:.08em}
   .score b{display:block;font-family:var(--sans);font-size:1.4rem;color:var(--accent);letter-spacing:0}
@@ -247,10 +257,56 @@
             <button data-mix="all" aria-pressed="true">Everything</button>
             <button data-mix="parts" aria-pressed="false">Parts</button>
             <button data-mix="preflight" aria-pressed="false">Preflight</button>
+            <button data-mix="movement" aria-pressed="false">Movement</button>
           </div>
         </div>
         <h2 id="qText"></h2>
         <div class="q-quote hidden" id="qQuote"></div>
+        <div class="mv hidden" id="mvBox">
+          <figure>
+            <svg viewBox="0 0 160 82" aria-hidden="true"><g class="mv-body" id="mvRoll" style="transform-origin:80px 55px">
+              <rect class="mv-s" x="56" y="40" width="48" height="3" rx="1.5"/>
+              <rect class="mv-c" id="mvElB" x="57" y="40" width="46" height="3"/>
+              <rect class="mv-s" x="78" y="14" width="4" height="32" rx="2"/>
+              <rect class="mv-c" id="mvRudB" x="78.5" y="16" width="3" height="26"/>
+              <rect class="mv-c" id="mvSpL" x="44" y="52" width="18" height="2" style="opacity:0"/>
+              <rect class="mv-c" id="mvSpR" x="98" y="52" width="18" height="2" style="opacity:0"/>
+              <rect class="mv-s" x="10" y="53" width="140" height="4" rx="2"/>
+              <rect class="mv-c" id="mvAilL" x="12" y="53" width="28" height="4" rx="1"/>
+              <rect class="mv-c" id="mvAilR" x="120" y="53" width="28" height="4" rx="1"/>
+              <circle class="mv-s" cx="80" cy="55" r="11"/>
+            </g></svg>
+            <figcaption>From behind</figcaption>
+          </figure>
+          <figure>
+            <svg viewBox="0 0 160 82" aria-hidden="true"><g class="mv-body" id="mvPitch" style="transform-origin:80px 55px">
+              <path class="mv-s" d="M118,50 L128,26 L138,26 L140,50 Z"/>
+              <rect class="mv-s" x="14" y="50" width="128" height="11" rx="5.5"/>
+              <rect class="mv-s" x="58" y="57" width="32" height="3" rx="1.5"/>
+              <rect class="mv-c" id="mvSlat" x="51" y="57" width="7" height="3" rx="1" style="transform-origin:58px 58.5px"/>
+              <rect class="mv-c" id="mvFlap" x="90" y="57" width="11" height="3" rx="1" style="transform-origin:90px 58.5px"/>
+              <g id="mvHs" style="transform-origin:128px 54px">
+                <rect class="mv-s" x="120" y="52.5" width="16" height="3" rx="1.5"/>
+                <g id="mvElS" style="transform-origin:136px 54px">
+                  <rect class="mv-c" x="136" y="52.5" width="10" height="3" rx="1"/>
+                  <rect class="mv-c mv-tab" id="mvTab" x="146" y="53" width="4" height="2" style="transform-origin:146px 54px"/>
+                </g>
+              </g>
+            </g></svg>
+            <figcaption>From the side</figcaption>
+          </figure>
+          <figure>
+            <svg viewBox="0 0 160 100" aria-hidden="true"><g class="mv-body" id="mvYaw" style="transform-origin:80px 50px">
+              <path class="mv-s" d="M75,38 L20,56 L20,61 L75,52 Z M85,38 L140,56 L140,61 L85,52 Z"/>
+              <path class="mv-s" d="M77,78 L56,86 L56,89 L77,86 Z M83,78 L104,86 L104,89 L83,86 Z"/>
+              <rect class="mv-s" x="75" y="8" width="10" height="80" rx="5"/>
+              <rect class="mv-s" x="79" y="72" width="2" height="16"/>
+              <rect class="mv-c" id="mvRudA" x="79" y="88" width="2" height="9" style="transform-origin:80px 88px"/>
+            </g></svg>
+            <figcaption>From above</figcaption>
+          </figure>
+          <button class="btn mv-replay hidden" id="mvReplay">↻ Replay</button>
+        </div>
         <div class="q-sub" id="qSub"></div>
         <div class="q-opts" id="qOpts"></div>
         <div class="feedback" id="feedback"></div>
@@ -1115,10 +1171,111 @@
     }
   });
 
+  // ---------- movement questions ----------
+  // `need`: parts the aircraft must have. `show`: surfaces shown before answering. `reveal`: what plays after answering.
+  // State keys: ail (1 = roll-right input: left aileron down, right up), elev (1 = up), rud (1 = right), spoil ('both' | 'L' | 'R'),
+  // flaps, slats, tab (1 = down), stab (whole tail pivots), and the aircraft's response: roll / pitch / yaw (1 = right / nose up / right).
+  const MOVES = [
+    { need: ['ailerons'], part: 'ailerons', text: 'The pilot turns the control wheel (yoke) to the left. What do the ailerons do?',
+      options: ['Left aileron goes up, right aileron goes down', 'Left aileron goes down, right aileron goes up', 'Both ailerons go up', 'Both ailerons go down'],
+      reveal: { ail: -1, roll: -1 }, explain: 'The raised left aileron cuts lift on the left wing and the lowered right aileron adds lift on the right, so the aircraft rolls left.' },
+    { need: ['ailerons'], part: 'ailerons', text: 'From behind, the left aileron is down and the right aileron is up. Which way will the aircraft roll?',
+      options: ['Roll right', 'Roll left', 'Pitch nose up', 'Yaw left'],
+      show: { ail: 1 }, reveal: { ail: 1, roll: 1 }, explain: 'The lowered left aileron adds lift on the left wing and the raised right aileron reduces it, so the right wing drops: a roll to the right.' },
+    { need: ['ailerons'], part: 'ailerons', text: 'On the walkaround you push the right aileron up by hand. What should the left aileron do?',
+      options: ['Move down', 'Move up', 'Stay still', 'Move up, then spring back'],
+      show: { ail: 1 }, reveal: { ail: 1 }, explain: 'The ailerons are linked so they always move in opposite directions. If both move the same way, the controls are rigged wrong and the aircraft must not fly.' },
+    { need: ['ailerons', 'rudder'], part: 'rudder', text: 'Rolling left with the ailerons makes the nose start to swing right (adverse yaw). How does the pilot fix it?',
+      options: ['Press the left rudder pedal at the same time', 'Press the right rudder pedal', 'Pull back on the yoke', 'Lower the flaps'],
+      reveal: { ail: -1, rud: -1, roll: -1, yaw: -1 }, explain: 'The rising right wing makes extra drag and drags the nose right. A touch of left rudder keeps the nose pointed into the turn. This is called a coordinated turn.' },
+    { need: ['elevator'], part: 'elevator', text: 'The pilot pulls the controls back. What do the elevators do?',
+      options: ['They move up', 'They move down', 'One goes up and one goes down', 'They stay still; only the trim tab moves'],
+      reveal: { elev: 1, pitch: 1 }, explain: 'Raised elevators push the tail down, which tips the nose up.' },
+    { need: ['elevator'], part: 'elevator', text: 'In the side view the elevators have moved down. What happens to the nose?',
+      options: ['It pitches down', 'It pitches up', 'It yaws right', 'Nothing until the flaps move'],
+      show: { elev: -1 }, reveal: { elev: -1, pitch: -1 }, explain: 'Lowered elevators lift the tail, so the nose drops. This is what happens when the pilot pushes the controls forward.' },
+    { need: ['trimTab'], part: 'trimTab', text: 'The pilot trims nose-up so they don\'t have to keep pulling. Which way does the elevator trim tab move?',
+      options: ['Down, which pushes the elevator up', 'Up, the same way as the elevator', 'It doesn\'t move; the whole tail moves', 'Sideways'],
+      reveal: { tab: 1, elev: 1, pitch: 1 }, explain: 'A trim tab moves opposite to its elevator. Air pressing on the lowered tab holds the elevator up, so the pilot can let go of the controls.' },
+    { need: ['hstab', 'slats'], part: 'hstab', text: 'On an airliner the whole horizontal stabilizer tilts slowly when the pilots trim. Which way does its leading edge move to trim nose-up?',
+      options: ['Down', 'Up', 'Sideways', 'It doesn\'t move'],
+      reveal: { elev: 1, stab: true, pitch: 1 }, explain: 'Tilting the leading edge down makes the tail push down harder, which raises the nose. Big jets trim this way because it is much stronger than a trim tab.' },
+    { need: ['stabilator'], part: 'stabilator', text: 'How does a stabilator move to pitch the nose up?',
+      options: ['The whole tail surface pivots, trailing edge up', 'Only a hinged elevator at the back moves', 'It slides forward', 'Its tips fold upwards'],
+      reveal: { elev: 1, stab: true, pitch: 1 }, explain: 'A stabilator has no separate elevator: the whole surface pivots on a shaft, which makes it very powerful at high speed.' },
+    { need: ['stabilator'], part: 'stabilator', text: 'On many fighters the left and right stabilators can move in opposite directions. What does that do?',
+      options: ['Helps the aircraft roll', 'Makes it yaw', 'Slows it down like a speed brake', 'Lowers the landing gear'],
+      reveal: { roll: 1 }, explain: 'Moving the stabilators in opposite directions (called "differential" movement) adds roll power on top of the flaperons.' },
+    { need: ['rudder'], part: 'rudder', text: 'The pilot presses the right rudder pedal. What happens?',
+      options: ['The rudder swings right and the nose yaws right', 'The rudder swings left and the nose yaws right', 'The aircraft rolls right', 'The nose pitches up'],
+      reveal: { rud: 1, yaw: 1 }, explain: 'Like a boat\'s rudder: swinging it right pushes the tail left, so the nose turns right.' },
+    { need: ['rudder'], part: 'rudder', text: 'Seen from above, the rudder has swung to the left. Which way will the nose yaw?',
+      options: ['Left', 'Right', 'Up', 'It won\'t move'],
+      show: { rud: -1 }, reveal: { rud: -1, yaw: -1 }, explain: 'The rudder pushes the tail the opposite way, so the nose swings towards the side the rudder moved to.' },
+    { need: ['flaps'], part: 'flaps', text: 'How do flaps move when they are lowered for landing?',
+      options: ['Back and down from the trailing edge', 'Up from the top of the wing', 'Forward and down from the leading edge', 'Out towards the wingtips'],
+      reveal: { flaps: 1 }, explain: 'Lowered flaps make the wing more curved (and on airliners, bigger), adding lift and drag so the aircraft can fly slowly.' },
+    { need: ['slats'], part: 'slats', text: 'How do leading-edge slats move?',
+      options: ['Forward and down from the front of the wing', 'Back and down from the trailing edge', 'Up from the top of the wing', 'Left and right'],
+      reveal: { slats: 1 }, explain: 'Slats open a slot at the front of the wing, which lets it reach a higher angle of attack before it stalls.' },
+    { need: ['slats', 'flaps'], part: 'flaps', text: 'For landing, an airliner extends both slats and flaps. Why?',
+      options: ['To make more lift at low speed', 'To go faster', 'To help steer on the ground', 'To cool the engines'],
+      reveal: { slats: 1, flaps: 1 }, explain: 'Together they reshape the wing for slow flight, so the aircraft can land at a safe, slower speed.' },
+    { need: ['spoilers'], part: 'spoilers', text: 'Which way do spoilers move when they deploy?',
+      options: ['Up, from the top of the wing', 'Down, from the bottom of the wing', 'Back, from the trailing edge', 'Forward, from the leading edge'],
+      reveal: { spoil: 'both' }, explain: 'Raised spoilers break up the smooth airflow over the wing, dumping lift and adding drag.' },
+    { need: ['spoilers'], part: 'spoilers', text: 'After touchdown, the spoilers on both wings pop up. Why?',
+      options: ['To dump lift so the weight goes onto the wheels for braking', 'To help the aircraft climb again', 'To steer the nose wheel', 'To cool the brakes'],
+      reveal: { spoil: 'both' }, explain: 'With the lift gone, the full weight presses on the tyres and the brakes work much better. These are often called "ground spoilers".' },
+    { need: ['spoilers', 'ailerons'], part: 'spoilers', text: 'When the pilot rolls left, which spoilers rise to help the ailerons?',
+      options: ['The spoilers on the left wing', 'The spoilers on the right wing', 'Both wings equally', 'None; spoilers only work on the ground'],
+      reveal: { ail: -1, spoil: 'L', roll: -1 }, explain: 'Raising spoilers on the left wing kills some of its lift, helping it drop into the roll.' },
+    { need: ['flaperons'], part: 'flaperons', text: 'To roll right, how do the flaperons move?',
+      options: ['Left flaperon down, right flaperon up', 'Left flaperon up, right flaperon down', 'Both down', 'Both up'],
+      reveal: { ail: 1, roll: 1 }, explain: 'Rolling, they work exactly like ailerons: the wing with the lowered surface rises.' },
+    { need: ['flaperons'], part: 'flaperons', text: 'For takeoff and landing, how do the flaperons help?',
+      options: ['Both droop down together, like flaps', 'Both rise like spoilers', 'They move in opposite directions', 'They lock in place'],
+      reveal: { flaps: 1 }, explain: 'Drooping together, they act like flaps and add lift at low speed. They can still move differently on top of that to roll the aircraft.' },
+    { need: ['noseGear', 'propeller'], part: 'noseGear', text: 'Taxiing a light aircraft, how do you steer the nose wheel?',
+      options: ['With the rudder pedals', 'By turning the control wheel', 'With the throttle', 'It can\'t be steered'],
+      reveal: { rud: 1 }, explain: 'The rudder pedals are linked to the nose wheel, and pressing the top of a pedal works that wheel\'s brake for tighter turns. Airliners use a small steering wheel called a tiller.' },
+  ];
+
+  // the three small animated views in the quiz card
+  const mvEl = id => document.getElementById(id);
+  function applyMove(st = {}) {
+    const set = (id, t) => { mvEl(id).style.transform = t; };
+    const ail = st.ail || 0, elev = st.elev || 0, rud = st.rud || 0;
+    set('mvAilL', `translateY(${ail * 4}px)`); set('mvAilR', `translateY(${-ail * 4}px)`);
+    set('mvElB', `translateY(${-elev * 4}px)`);
+    set('mvRudB', `translateX(${rud * 4}px)`);
+    for (const side of ['L', 'R']) {
+      const up = st.spoil === 'both' || st.spoil === side;
+      set('mvSp' + side, up ? 'translateY(-4px)' : 'none'); mvEl('mvSp' + side).style.opacity = up ? 1 : 0;
+    }
+    set('mvSlat', st.slats ? 'rotate(-30deg)' : 'none');
+    set('mvFlap', st.flaps ? 'rotate(32deg)' : 'none');
+    set('mvHs', st.stab ? `rotate(${-elev * 14}deg)` : 'none');
+    set('mvElS', st.stab ? 'none' : `rotate(${-elev * 25}deg)`);
+    set('mvTab', `rotate(${(st.tab || 0) * 35}deg)`);
+    set('mvRudA', `rotate(${-rud * 25}deg)`);
+    set('mvRoll', `rotate(${(st.roll || 0) * 12}deg)`);
+    set('mvPitch', `rotate(${(st.pitch || 0) * 10}deg)`);
+    set('mvYaw', `rotate(${(st.yaw || 0) * 10}deg)`);
+  }
+  // jump to the "before" state without animating, then play the answer
+  function replayMove() {
+    const c = q.cur, box = mvEl('mvBox');
+    if (!c || !c.move) return;
+    box.classList.add('mv-instant'); applyMove(c.show); void box.offsetWidth; box.classList.remove('mv-instant');
+    setTimeout(() => applyMove(c.reveal), 80);
+  }
+  document.getElementById('mvReplay').addEventListener('click', replayMove);
+
   // ---------- quiz: mixes part questions (from Explore) with walkaround questions (from Preflight) ----------
   const q = state.quiz;
   const fb = document.getElementById('feedback');
-  const QUIZ_TYPES = { all: ['find', 'name', 'desc', 'pfPart', 'pfWhy'], parts: ['find', 'name', 'desc'], preflight: ['pfPart', 'pfWhy'] };
+  const QUIZ_TYPES = { all: ['find', 'name', 'desc', 'pfPart', 'pfWhy', 'move'], parts: ['find', 'name', 'desc'], preflight: ['pfPart', 'pfWhy'], movement: ['move'] };
   const pick = arr => arr[Math.floor(Math.random() * arr.length)];
   const shuffle = arr => { const a = [...arr]; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
   const mentions = (text, id) => text.toLowerCase().includes(PARTS[id].name.toLowerCase());
@@ -1140,6 +1297,11 @@
   const NOT_PART_QUESTIONS = ['Paperwork', 'Control lock removed', 'Ignition off, key out', 'Master on: fuel gauges', 'Tail tie-down',
     'Ejection seat', 'Right side', 'Left wing surfaces', 'Big-picture look'];
   const GENERATORS = {
+    move() {
+      const m = pick(MOVES.filter(m => m.need.every(id => modelParts().has(id))));
+      return { kind: 'Movement', key: 'move' + m.text, part: m.part, move: true, text: m.text, show: m.show || {}, reveal: m.reveal,
+        options: shuffle(m.options.map((label, i) => ({ label, correct: i === 0 }))), explain: m.explain };
+    },
     find() {
       const id = pick([...modelParts()]);
       return { kind: 'Parts', key: 'find' + id, part: id, text: `Find the ${PARTS[id].name}`, sub: 'Tap it on the diagram. You can switch between top and side view.', explain: PARTS[id].desc };
@@ -1186,6 +1348,11 @@
     const quote = document.getElementById('qQuote');
     quote.textContent = c.quote || ''; quote.classList.toggle('hidden', !c.quote);
     document.getElementById('qSub').textContent = c.sub || '';
+    const box = mvEl('mvBox');
+    box.classList.toggle('hidden', !c.move);
+    mvEl('mvReplay').classList.toggle('hidden', !c.answered);
+    if (c.move && c.answered) applyMove(c.reveal);
+    else if (c.move) { box.classList.add('mv-instant'); applyMove(c.show); void box.offsetWidth; box.classList.remove('mv-instant'); }
     const opts = document.getElementById('qOpts');
     opts.classList.toggle('long', !!c.long);
     opts.replaceChildren(...(c.options || []).map((o, i) => {
