@@ -135,16 +135,35 @@
   .pf-bar.done span{background:var(--good)}
   .pf-note{font-size:.76rem;color:var(--faint);margin-top:6px}
   .pf-done{color:var(--good);font-size:.9rem;margin-top:10px}
-  .pf-list{display:flex;flex-direction:column;gap:14px;margin-top:14px}
-  .pf-station .eyebrow{margin-bottom:4px}
-  .pf-row{display:flex;gap:10px;align-items:flex-start;padding:6px 8px;border-radius:9px;border:1px solid transparent;transition:background .12s}
-  .pf-row input{accent-color:var(--good);width:17px;height:17px;margin-top:3px;flex:none;cursor:pointer}
-  .pf-row button{background:none;border:0;text-align:left;cursor:pointer;flex:1;padding:0;font-size:.88rem;color:var(--text)}
-  .pf-row button small{display:none;color:var(--muted);font-size:.82rem;line-height:1.5;margin-top:3px}
+  /* the checklist scrolls inside its own box so the plane and the current step stay in view */
+  .pf-list{position:relative;display:flex;flex-direction:column;gap:10px;margin-top:12px;max-height:min(56vh,520px);overflow-y:auto;
+    padding-right:6px;scrollbar-width:thin;scrollbar-color:#3d3258 transparent;overscroll-behavior:contain}
+  .pf-list::-webkit-scrollbar{width:8px}
+  .pf-list::-webkit-scrollbar-thumb{background:#3d3258;border-radius:999px}
+  .pf-station .eyebrow{position:sticky;top:0;z-index:1;background:var(--panel);margin:0;padding:4px 0}
+  .pf-row{display:flex;gap:9px;align-items:center;padding:3px 6px;border-radius:8px;border:1px solid transparent;transition:background .12s}
+  .pf-row input{accent-color:var(--good);width:16px;height:16px;flex:none;cursor:pointer}
+  .pf-row button{background:none;border:0;text-align:left;cursor:pointer;flex:1;padding:2px 0;font-size:.85rem;color:var(--text);line-height:1.35}
+  .pf-row .n{display:inline-block;min-width:1.7em;font-family:var(--mono);font-size:.72rem;color:var(--faint)}
+  .pf-row:hover{background:var(--panel-2)}
   .pf-row.cur{background:var(--accent-soft);border-color:rgba(160,107,255,.35)}
-  .pf-row.cur button small{display:block}
   .pf-row.done button{color:var(--faint);text-decoration:line-through}
   .pf-row.done.cur button{text-decoration:none;color:var(--muted)}
+
+  /* current step card under the diagram */
+  .col-main{display:flex;flex-direction:column;gap:14px;min-width:0}
+  .step-card h2{margin-top:2px}
+  .step-top{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+  .step-top .eyebrow{margin:0}
+  .step-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px 22px;margin-top:4px}
+  .step-grid p{margin-top:2px}
+  .step-label{font-family:var(--mono);font-size:.66rem;text-transform:uppercase;letter-spacing:.09em;color:var(--accent);margin-top:12px}
+  .step-card.is-done h2::after{content:' ✓';color:var(--good)}
+  .btn:disabled{opacity:.4;cursor:default}
+  .btn-row .btn.primary{margin-left:auto}
+  /* shorter diagram in preflight so the step card fits on screen with it */
+  .pf-mode .stage svg{max-height:min(48vh,440px)}
+  @media(max-width:700px){.step-grid{grid-template-columns:1fr}.pf-list{max-height:300px}.stage .hint{display:none}}
 
   footer{text-align:center;padding:30px;color:var(--faint);font-size:.82rem;border-top:1px solid var(--line-soft)}
   @media(max-width:600px){.wrap,.nav-inner{padding-left:16px;padding-right:16px}.intro h1{font-size:1.5rem}.brand-name span{display:none}.stage{padding:6px}}
@@ -183,9 +202,27 @@
   </div>
 
   <div class="layout">
-    <div class="stage" id="stage">
-      <svg id="diagram" role="img" aria-label="Airplane diagram"></svg>
-      <div class="hint" id="hint">click a part</div>
+    <div class="col-main">
+      <div class="stage" id="stage">
+        <svg id="diagram" role="img" aria-label="Airplane diagram"></svg>
+        <div class="hint" id="hint">click a part</div>
+      </div>
+
+      <div class="card step-card hidden" id="pfStep">
+        <div class="step-top">
+          <div class="eyebrow" id="pfStepWhere"></div>
+          <span class="chip axis" id="pfStepPart"></span>
+        </div>
+        <h2 id="pfStepTitle"></h2>
+        <div class="step-grid">
+          <div><div class="step-label">What to check</div><p id="pfStepCheck"></p></div>
+          <div><div class="step-label">Why it matters</div><p id="pfStepWhy"></p></div>
+        </div>
+        <div class="btn-row">
+          <button class="btn" id="pfPrev">← Back</button>
+          <button class="btn primary" id="pfNext"></button>
+        </div>
+      </div>
     </div>
 
     <aside class="panel">
@@ -533,12 +570,14 @@
       ],
       over: [
         { part: 'trimTab', poly: LH.quad(.55, .85, .86, 1), cls: 'surf2' },
+        { part: 'pitot', d: 'M290,262 L290,236', cls: 'line' },
         { part: 'vstab', d: 'M497,560 L503,560 L504,640 L500,652 L496,640 Z', cls: 'surf2' },
         { part: 'navlights', el: 'circle', a: { cx: 864, cy: 258, r: 5 }, cls: 'light-g' },
         { part: 'navlights', el: 'circle', a: { cx: 136, cy: 258, r: 5 }, cls: 'light-r' },
       ],
       labels: [
         { part: 'propeller', a: [580, 99], l: [640, 70] },
+        { part: 'pitot', a: [290, 238], l: [300, 160], end: true },
         { part: 'spinner', a: [500, 82], l: [420, 60], end: true },
         { part: 'cowling', a: [500, 140], l: [420, 130], end: true },
         { part: 'windscreen', a: [500, 215], l: [420, 205], end: true },
@@ -675,100 +714,124 @@
 
   const MODELS = { airliner: AIRLINER, jumbo: JUMBO, light: LIGHT, fighter: FIGHTER };
 
-  // ---------- preflight walkarounds: [station, [[part, check, what to look for], ...]] ----------
+  // ---------- preflight walkarounds: [station, [[part, step, what to check, why it matters], ...]] ----------
   const jetWalkaround = engines => [
     ['Nose', [
-      ['radome', 'Nose cone', 'No dents, cracks or lightning-strike marks; latches closed.'],
-      ['pitot', 'Pitot tubes', 'Covers removed and openings clear of bugs or ice.'],
-      ['flightdeck', 'Flight deck windows', 'Clean, no cracks or delamination.'],
-      ['noseGear', 'Nose landing gear', 'Tyres inflated and undamaged, strut extended, steering pin removed.'],
+      ['radome', 'Nose cone (radome)', 'Look for dents, cracks, worn paint and small burn marks from lightning strikes. Make sure the latches are closed.', 'The radome covers the weather radar. Damage can hide problems in the structure behind it and can distort the radar picture.'],
+      ['pitot', 'Pitot probes', 'Check that every probe cover and its red "remove before flight" flag is gone, and that each probe is straight, clear and undamaged.', 'Airspeed comes from these probes. Blocked pitot probes have caused fatal accidents, so this is one of the most important checks on the aircraft.'],
+      ['fuselage', 'Static ports and angle-of-attack vanes', 'Find the small flush static ports on the side of the nose and make sure they are clear and the skin around them is smooth. Angle-of-attack vanes should be undamaged and move freely.', 'Static ports feed the altimeter and airspeed indicator; the vanes feed the stall-warning system. Tape accidentally left over the static ports after washing caused the Aeroperú 603 crash.'],
+      ['flightdeck', 'Flight deck windows', 'Clean, with no cracks, delamination (bubbles between the layers) or burn marks around the edges.', 'The windscreens are heated against ice and built to survive bird strikes. A cracked layer means maintenance has to inspect it before flight.'],
+      ['noseGear', 'Nose landing gear', 'Tyres: no cuts or bulges, tread not worn, pressure looks right. Strut extended a normal amount with no hydraulic fluid leaking. Gear safety pin removed.', 'If the gear pin is left in, the gear cannot retract after takeoff. A badly inflated tyre can burst on the takeoff run.'],
     ]],
     ['Left side', [
-      ['door', 'Passenger doors', 'Closed and flush with the fuselage, no damage around the seals.'],
-      ['inlet', 'Engine inlet', `Check ${engines} for damaged fan blades and anything sucked into the intake.`],
-      ['engine', 'Engine nacelles', 'Cowl latches closed and locked, no oil or fuel leaks.'],
-      ['pylon', 'Pylons', 'No fluid leaks or loose panels.'],
-      ['exhaust', 'Exhaust nozzles', 'No cracks, heat damage or debris.'],
-      ['slats', 'Leading-edge slats', 'Retracted, undamaged, no dents from bird strikes.'],
-      ['winglet', 'Wingtip and winglet', 'No damage; navigation light lenses intact.'],
-      ['ailerons', 'Ailerons', 'Undamaged, hinges and actuators secure.'],
-      ['flaps', 'Flaps', 'Retracted, tracks and fairings secure, no fuel dripping from the wing.'],
-      ['mainGear', 'Main landing gear', 'Tyre tread and pressure, brake-wear pins visible, no hydraulic leaks.'],
-      ['fairing', 'Wing-to-body fairing', 'Access panels closed and secure.'],
+      ['door', 'Doors and hatches', 'Passenger, service and cargo doors closed and flush with the fuselage. No damage around the door seals from catering trucks or air bridges.', 'A door that is not properly latched can blow open as the cabin pressurises. Ground vehicles often bump the doors without anyone noticing.'],
+      ['inlet', 'Engine inlets and fan blades', `Shine a torch into the inlet of ${engines}. Fan blades should not be nicked, bent or cracked; there should be nothing loose inside; the engine covers must be removed.`, 'Anything sucked into an engine (called FOD, foreign object debris) or a damaged fan blade can cause an engine failure right when you need full power on takeoff.'],
+      ['engine', 'Engine cowlings', 'All cowl latches closed and locked. No oil, fuel or hydraulic fluid leaking, and nothing dripping from the drain tube at the bottom of the engine.', 'Fan cowls left unlatched after maintenance have torn off on takeoff several times. Leaks can be the first sign of an engine problem.'],
+      ['pylon', 'Pylons', 'No fluid leaks, cracks or missing fasteners along the pylon.', 'The pylon carries the whole weight and thrust of the engine, plus the fuel, hydraulic and air lines that feed it.'],
+      ['exhaust', 'Exhaust and thrust reversers', 'Exhaust area clear, no cracks or heat damage. The thrust reverser is fully stowed (closed) with no gaps.', 'Thrust reversers redirect the exhaust forward to slow down after landing. One that is not properly stowed could deploy in flight.'],
+      ['slats', 'Leading-edge slats', 'No dents (often from bird strikes) or other damage; the slats sit where the cockpit says they are.', 'Slats let the wing fly slowly for takeoff and landing. A dent on the leading edge disturbs the airflow over the whole wing behind it.'],
+      ['winglet', 'Wingtip and winglet', 'No damage. Navigation and strobe light lenses intact. Static dischargers (the thin wicks on the trailing edge) present.', 'Wingtips are the part most often clipped while taxiing. Static dischargers bleed off static electricity that would otherwise cause radio interference.'],
+      ['ailerons', 'Ailerons', 'No damage. Hinges, actuators and static wicks secure; no hydraulic fluid around the actuators.', 'The ailerons roll the aircraft. On airliners they are moved by hydraulics, so fluid around an actuator is a warning sign.'],
+      ['spoilers', 'Spoilers', 'All spoiler panels lie flush with the top of the wing, with no damage.', 'A raised spoiler destroys lift on that wing. If one is not flush, it points to a hydraulic or rigging fault.'],
+      ['flaps', 'Flaps and flap fairings', 'Flaps retracted, tracks and canoe-shaped fairings undamaged. Nothing dripping from the underside of the wing.', 'The flaps carry big loads when extended. Fuel stains under the wing mean a tank leak, because the wings hold most of the fuel.'],
+      ['mainGear', 'Main landing gear', 'Tyres: cuts, wear and pressure. Brake-wear pins still sticking out. No hydraulic leaks. Gear doors secure; chocks in place.', 'The brake-wear pins show how much brake material is left. If a pin is flush with its housing, the brakes are worn out and must be changed.'],
+      ['fairing', 'Wing-to-body fairing', 'All access panels closed and secure. Air-conditioning inlets and outlets clear.', 'A loose panel can tear off in flight and hit the tail. The air-conditioning packs live inside this fairing.'],
     ]],
     ['Tail', [
-      ['elevator', 'Horizontal stabilizer and elevators', 'No damage or ice; elevators free of obstructions.'],
-      ['rudder', 'Vertical stabilizer and rudder', 'No damage; anti-collision light intact.'],
-      ['tailcone', 'Tail cone and APU exhaust', 'Exhaust clear, APU access doors closed.'],
+      ['fuselage', 'Rear fuselage and cargo door', 'Aft cargo door closed. No dents or scrapes on the underside of the tail (from a tail strike). Drain masts not leaking.', 'A tail strike on takeoff or landing can damage the pressure bulkhead inside the tail, and must always be inspected.'],
+      ['elevator', 'Horizontal stabilizer and elevators', 'No damage. Completely free of ice, snow and frost. Static wicks present.', 'The tail must be completely clean. Ice on the horizontal stabilizer can cause a sudden, hard nose-down pitch on approach.'],
+      ['rudder', 'Vertical stabilizer and rudder', 'No damage. Tail lights and anti-collision beacon intact.', 'If an engine fails, the rudder is what balances the thrust from the remaining engine(s) and keeps the aircraft straight.'],
+      ['tailcone', 'Tail cone and APU', 'APU exhaust and air inlet clear, access doors closed, no oil streaks.', 'The APU (auxiliary power unit) powers the aircraft on the ground and can start the main engines. An oil streak can mean an APU fault.'],
     ]],
     ['Right side', [
-      ['fuselage', 'Fuselage', 'Repeat the wing and engine checks on the right; look for dents, missing rivets and closed cargo doors.'],
+      ['fuselage', 'Right side', 'Repeat the engine, wing, gear and door checks on the right, and finish back at the nose.', 'Both sides need the same care. The right side is the service side, where catering, cargo and fuel trucks work, so it collects the most bumps.'],
     ]],
   ];
+
   const PREFLIGHT = {
     airliner: jetWalkaround('both engines'),
     jumbo: (() => {
       const w = jetWalkaround('all four engines');
-      w[0][1].splice(3, 0, ['upperdeck', 'Upper deck', 'Windows and skin undamaged; upper-deck door closed.']);
+      w[0][1].splice(3, 0, ['upperdeck', 'Upper deck', 'Upper-deck windows and skin undamaged; upper-deck emergency door closed and flush.', 'The upper deck is part of the pressurised cabin, so it gets the same door and skin checks as the main deck.']);
       return w;
     })(),
     light: [
       ['Cabin', [
-        ['cabinDoor', 'Documents and control lock', 'Required documents aboard; control lock removed; ignition off and key out.'],
-        ['flaps', 'Master on, flaps down', 'Check the fuel gauges, lower the flaps fully for the inspection, then master off.'],
+        ['cabinDoor', 'Paperwork', 'Make sure the required documents are aboard. In the US the memory aid is ARROW: Airworthiness certificate, Registration, Radio licence (if needed), Operating handbook (POH), Weight and balance.', 'You cannot legally fly without them, and the operating handbook (POH) holds the checklists, speeds and limits for this exact aircraft.'],
+        ['cabinDoor', 'Control lock removed', 'Pull the control lock out of the control column (yoke) and stow it.', 'With the lock in, the elevators and ailerons are jammed. People have tried to take off with it still installed, with fatal results.'],
+        ['propeller', 'Ignition off, key out', 'Check the magneto (ignition) switch is OFF and take the key out. Put it on the dashboard where you can see it.', 'A broken magneto wire can leave the engine "live" even when switched off, so moving the propeller could start it. Always treat a propeller as if it could start.'],
+        ['wing', 'Master on: fuel gauges', 'Turn the master switch on and read both fuel gauges.', 'This gives you a first idea of the fuel aboard. Fuel gauges in light aircraft are often inaccurate, so you will also look in the tanks.'],
+        ['flaps', 'Flaps down, master off', 'Lower the flaps fully, watch them move and check the indicator, then turn the master switch off.', 'Lowering them proves the flap motor works and lets you inspect the hinges and rollers outside. Switching the master off saves the battery.'],
       ]],
-      ['Left wing', [
-        ['flaps', 'Left flap', 'Secure, hinges and push-rod intact.'],
-        ['ailerons', 'Left aileron', 'Moves freely and in the right direction; hinges and cotter pins secure.'],
-        ['navlights', 'Wingtip and navigation light', 'No damage; red light lens intact.'],
-        ['wing', 'Fuel tank and sump', 'Check fuel quantity by eye, cap secure; drain a sample and check for water or dirt.'],
-        ['strut', 'Wing strut', 'Secure at both ends, no dents.'],
-        ['mainGear', 'Left main gear', 'Tyre inflation and wear, brake line and disc in good shape.'],
-        ['wheelPants', 'Wheel fairing', 'Secure, no cracks, not rubbing the tyre.'],
-      ]],
-      ['Nose', [
-        ['cowling', 'Engine oil and cowling', 'Oil level on the dipstick, cap tight; cowling fasteners secure; air intake clear.'],
-        ['propeller', 'Propeller', 'No nicks or cracks in the blades.'],
-        ['spinner', 'Spinner', 'Secure, no cracks.'],
-        ['noseGear', 'Nose gear', 'Strut properly extended, tyre inflated, no leaks.'],
-        ['windscreen', 'Windscreen', 'Clean, no cracks.'],
+      ['Left fuselage', [
+        ['fuselage', 'Fuselage skin and antennas', 'Walk down the left side looking for dents, wrinkled skin and loose rivets. Antennas secure. Baggage door locked.', 'Wrinkled skin can mean a hard landing bent the structure. An unlocked baggage door can pop open in flight and distract you.'],
+        ['fuselage', 'Static port', 'Find the small static port on the side of the fuselage (near the cabin on a Cessna) and make sure it is clear.', 'The altimeter, vertical-speed indicator and airspeed indicator all use it. A blocked port makes all three read wrong.'],
       ]],
       ['Tail', [
-        ['fuselage', 'Fuselage', 'Skin and antennas undamaged; baggage door locked.'],
-        ['elevator', 'Elevators', 'Move freely; hinges secure.'],
-        ['trimTab', 'Trim tab', 'Secure, linkage intact.'],
-        ['rudder', 'Rudder', 'Moves freely; tail tie-down removed.'],
+        ['vstab', 'Tail tie-down', 'Untie the rope holding the tail to the ground.', 'A forgotten tie-down is a classic mistake. Trying to taxi with it attached can damage the tail.'],
+        ['hstab', 'Horizontal stabilizer', 'No dents, cracks or loose bolts where it attaches. Completely free of ice, snow or frost.', 'Even a thin layer of frost on the tail or wings can ruin the lift they make. They must be completely clean before flight.'],
+        ['elevator', 'Elevators', 'Move the elevator up and down by hand through its full travel. Hinges, bolts and cotter pins secure.', 'The elevator controls pitch (nose up and down). Anything loose or jammed here can make the aircraft impossible to control.'],
+        ['trimTab', 'Elevator trim tab', 'Tab secure, with no wobble in its linkage.', 'A loose trim tab can "flutter" (vibrate violently) at speed and damage the tail.'],
+        ['rudder', 'Rudder', 'Move the rudder side to side. Hinges, cables and the tail light secure.', 'The rudder controls yaw (nose left and right) and is essential for landing in a crosswind.'],
       ]],
       ['Right wing', [
-        ['wing', 'Right wing', 'Repeat the left-wing checks: aileron, flap, fuel and sump, strut, wheel.'],
+        ['flaps', 'Right flap', 'Flap secure; rollers, tracks and push-rod intact; no damage.', 'The flaps carry large loads when extended. A broken roller can let a flap jam, or extend on only one side.'],
+        ['ailerons', 'Right aileron', 'Move it through its full travel. Hinges, cotter pins and push-rod secure.', 'The ailerons roll the aircraft. When one goes up, the other should go down.'],
+        ['navlights', 'Right wingtip', 'Wingtip undamaged; green navigation light intact.', 'Wingtips are the first thing to hit hangar doors and other aircraft when taxiing.'],
+        ['wing', 'Right fuel tank', 'Open the fuel cap and look at the fuel level (a dipstick is more accurate). Check the colour, then put the cap back on tightly.', 'Running out of fuel is one of the most common causes of accidents. Blue fuel is 100LL avgas. A loose cap can suck fuel out of the tank in flight.'],
+        ['wing', 'Fuel sumps', 'Drain a sample from each sump drain into a fuel tester. Look for water (clear bubbles at the bottom), dirt and the right colour.', 'Water is heavier than fuel and sinks to the sump. If water reaches the engine, it can stop it.'],
+        ['strut', 'Wing strut', 'Attachments secure at both ends; no dents or corrosion.', 'The strut carries a large share of the wing\'s load in flight.'],
+        ['mainGear', 'Right main gear', 'Tyre properly inflated with no cuts or bald spots. Brake disc not badly worn; no brake fluid leaking. Chock removed.', 'On the ground you steer and stop with the brakes. A flat tyre can drag you off the runway.'],
+        ['wheelPants', 'Right wheel fairing', 'Secure, no cracks, not rubbing on the tyre.', 'Mud or grass packed inside a fairing can lock the wheel. A loose fairing can jam against the tyre.'],
+      ]],
+      ['Nose', [
+        ['cowling', 'Engine oil', 'Open the oil door, check the dipstick (know your aircraft\'s minimum, often 5 to 6 quarts on a 172), and screw the cap back on tightly.', 'Low oil overheats and destroys the engine. A loose cap can spray oil all over the windscreen.'],
+        ['cowling', 'Fuel strainer', 'Drain a sample from the fuel strainer under the engine and check it the same way as the wing sumps.', 'It is the lowest point of the fuel system before the engine, so it is your last chance to catch water.'],
+        ['cowling', 'Air intakes and cowling', 'Air filter and cooling inlets clear (birds love to nest here). All cowling fasteners secure.', 'A blocked air intake starves the engine. A bird\'s nest blocks cooling and can catch fire.'],
+        ['propeller', 'Propeller', 'Run your eye (and gently your hand) along each blade, never standing in the arc. Look for nicks, cracks and oil streaks.', 'A small nick concentrates stress and can grow into a crack. A blade that breaks off can shake the engine loose.'],
+        ['spinner', 'Spinner', 'Secure, no cracks, all screws in place.', 'A loose spinner can shatter and damage the propeller or windscreen.'],
+        ['noseGear', 'Nose gear', 'Strut properly extended (a few inches of shiny chrome showing), tyre inflated, shimmy damper secure, no fluid leaking.', 'A flat strut lowers the propeller towards the ground. A worn shimmy damper lets the nose wheel shake on landing.'],
+        ['windscreen', 'Windscreen', 'Clean (use the right cleaner and a soft cloth), no cracks.', 'Bugs and smears hide other traffic, especially when flying towards the sun.'],
+      ]],
+      ['Left wing', [
+        ['wing', 'Left fuel tank and sumps', 'Repeat the fuel level, cap and sump-drain checks on the left tank.', 'Each tank can hold a different amount of fuel, and either can have water in it.'],
+        ['pitot', 'Pitot tube', 'Remove the cover and check the opening is clear. Never blow into it.', 'A blocked pitot tube means no airspeed. Insects nest in uncovered tubes. Blowing into it can damage the instruments.'],
+        ['wing', 'Fuel vent and stall warning', 'Check the fuel vent tube under the wing is clear, and the stall-warning opening on the leading edge is clear (gently suck through it to hear the horn).', 'A blocked fuel vent can stop fuel reaching the engine. The stall warning tells you when the wing is close to stalling.'],
+        ['ailerons', 'Left wing surfaces', 'Repeat the aileron, flap, wingtip light, strut, main-gear and wheel-fairing checks on the left side.', 'The left wing needs exactly the same care as the right.'],
+      ]],
+      ['Final check', [
+        ['fuselage', 'Big-picture look', 'Step back and look at the whole aircraft. Chocks, tie-downs and covers removed and stowed; doors closed; nothing left on the wings.', 'The final look catches anything you missed, like a fuel cap left sitting on the wing or a cover still on the pitot tube.'],
       ]],
     ],
     fighter: [
       ['Nose', [
-        ['pitot', 'Pitot tube', 'Cover removed and opening clear.'],
-        ['radome', 'Nose cone', 'Latched and undamaged.'],
-        ['canopy', 'Canopy', 'Clean, no cracks or crazing, seals intact; ejection-seat pins accounted for.'],
-        ['intake', 'Engine intake', 'Cover removed; check inside for loose objects (foreign object damage).'],
-        ['noseGear', 'Nose gear', 'Tyre, strut and lights; gear safety pin removed.'],
+        ['pitot', 'Pitot probe', 'Cover removed; probe straight, clear and undamaged.', 'Airspeed feeds the fly-by-wire flight-control computer, which uses it to decide how far to move the control surfaces.'],
+        ['radome', 'Radome', 'Latched, with no cracks or rain erosion.', 'It protects the fire-control radar. Damage can degrade the radar or let the radome break up at high speed.'],
+        ['canopy', 'Canopy', 'Clean; no cracks, crazing (fine surface cracks) or deep scratches in the line of sight. Seals and locking hooks intact.', 'Seeing other aircraft is everything in a fighter. Crazing weakens the canopy against bird strikes.'],
+        ['canopy', 'Ejection seat', 'Seat safety pins in place until the pilot straps in; firing handles and connections checked with the crew chief.', 'An ejection seat is fired by rockets. The pins stop it firing by accident on the ground.'],
+        ['intake', 'Engine intake', 'Intake cover removed. Shine a torch inside: no loose objects, missing screws or damage to the duct or fan.', 'A jet engine swallows anything loose. FOD (foreign object debris) is a major cause of engine damage, which is why crews do "FOD walks" across the ramp.'],
+        ['noseGear', 'Nose gear', 'Tyre, strut and taxi/landing lights checked; gear safety pin removed and counted.', 'Safety pins are counted against a list so none are left in the aircraft or dropped where an engine could swallow them.'],
       ]],
       ['Left side', [
-        ['lerx', 'Leading-edge root extension', 'Panels secure, no damage.'],
-        ['lef', 'Leading-edge flaps', 'Undamaged, actuators secure.'],
-        ['missileRail', 'Wingtip missile rail', 'Rail secure; stores and safety pins as briefed.'],
-        ['flaperons', 'Flaperons', 'No damage, no hydraulic leaks.'],
-        ['mainGear', 'Main gear', 'Tyre, brakes and strut; gear pin removed.'],
+        ['lerx', 'Leading-edge root extension', 'Panels secure, no dents.', 'The vortex from the LERX keeps the wing flying at very high angles of attack.'],
+        ['lef', 'Leading-edge flaps', 'Undamaged; actuator fairings secure.', 'The flight computer moves them automatically. Damage limits how hard the jet can manoeuvre.'],
+        ['missileRail', 'Wingtip rail and stores', 'Rail secure; missiles, pylons and tanks attached, with their safety pins in place until the arming area.', 'Weapons have their own safety pins, which are only pulled in the arming area just before takeoff.'],
+        ['flaperons', 'Flaperons', 'No damage; no hydraulic leaks at the actuators.', 'They are the main roll control. The flight computer cannot make up for a jammed surface.'],
+        ['mainGear', 'Main gear', 'Tyres, brakes and strut checked; no leaks; gear safety pin removed.', 'Fighters land fast and brake hard, so worn tyres and brakes fail quickly.'],
+        ['fuselage', 'Panels and fuel caps', 'All access panels closed; no fuel or hydraulic leaks; fuel caps secure.', 'A loose panel can tear off at high speed or be sucked into the intake.'],
       ]],
       ['Tail', [
-        ['ventralFins', 'Ventral fins', 'Secure, no cracks.'],
-        ['afterburner', 'Afterburner nozzle', 'Nozzle petals intact, no cracks or heat damage.'],
-        ['stabilator', 'Stabilators', 'Undamaged, no fluid leaks at the pivots.'],
-        ['rudder', 'Vertical stabilizer and rudder', 'No damage; lights intact.'],
+        ['ventralFins', 'Ventral fins', 'Secure, no cracks.', 'They add stability at high angles of attack, and their roots are a known spot for fatigue cracks.'],
+        ['afterburner', 'Afterburner nozzle', 'Look inside the tailpipe: nozzle petals intact; no cracks, burn-through or missing parts.', 'The nozzle handles the hottest gas in the aircraft, and cracks here can grow quickly.'],
+        ['stabilator', 'Stabilators', 'Undamaged; no leaks at the pivot actuators.', 'The stabilator is the main pitch control: the whole tail surface moves.'],
+        ['rudder', 'Vertical stabilizer and rudder', 'No damage; lights and antennas intact; arresting hook stowed.', 'The arresting hook can catch a cable across the runway in an emergency, so it must be stowed and working.'],
       ]],
       ['Right side', [
-        ['fuselage', 'Fuselage', 'Repeat the wing and gear checks on the right; all access panels closed, no fuel or hydraulic leaks.'],
+        ['fuselage', 'Right side', 'Repeat the wing, rail, gear and panel checks on the right side.', 'Both sides need the same care before the pilot climbs in.'],
       ]],
     ],
   };
+
   const VIEW_NAMES = ['top', 'side'];
   const shapesOf = v => [...(v.under || []), ...(v.halves || []), ...(v.over || [])];
   const partsIn = v => [...new Set(shapesOf(v).map(s => s.part))];
@@ -827,7 +890,7 @@
     if (id) svg.querySelectorAll(`[data-part="${id}"]`).forEach(e => (e.classList.contains('lbl') || e.classList.contains('p')) && e.classList.add(cls));
   }
   function paint() {
-    mark('on', state.mode === 'explore' ? state.selected : state.mode === 'preflight' ? pfCurrent()?.[0] : null);
+    mark('on', state.mode === 'explore' ? state.selected : state.mode === 'preflight' ? pfCurrent()?.part : null);
     mark('hov', state.hover);
     stage.classList.toggle('labels-off', state.mode === 'quiz' || !state.showLabels);
     const here = partsIn(view());
@@ -891,9 +954,10 @@
 
   // ---------- preflight ----------
   const pf = { checked: new Set(), cur: 0 };
-  const pfItems = () => PREFLIGHT[state.model].flatMap(([, items]) => items);
+  const pfItems = () => PREFLIGHT[state.model].flatMap(([station, items]) =>
+    items.map(([part, title, check, why]) => ({ station, part, title, check, why })));
   const pfCurrent = () => pfItems()[pf.cur];
-  const pfKey = () => 'airplane-preflight-' + state.model;
+  const pfKey = () => 'airplane-preflight-v2-' + state.model;
   function pfSave() { try { localStorage.setItem(pfKey(), JSON.stringify([...pf.checked])); } catch (e) {} }
   function pfLoad() {
     pf.checked = new Set();
@@ -907,7 +971,7 @@
   }
   function pfFocus(i) {
     pf.cur = i;
-    const part = pfCurrent()[0];
+    const part = pfCurrent().part;
     if (!partsIn(view()).includes(part)) setView(viewsWith(part)[0]);
     pfRender(); paint();
   }
@@ -918,29 +982,53 @@
   }
   function pfRender() {
     const list = document.getElementById('pfList');
-    const items = pfItems(), done = pf.checked.size, total = items.length;
+    const items = pfItems(), done = pf.checked.size, total = items.length, cur = items[pf.cur];
     document.getElementById('pfModel').textContent = model().name.toLowerCase();
     document.getElementById('pfCount').textContent = `${done} / ${total}`;
     document.querySelector('#pfBar span').style.width = (100 * done / total) + '%';
     document.getElementById('pfBar').classList.toggle('done', done === total);
     document.getElementById('pfDone').classList.toggle('hidden', done !== total);
+
+    // the step card under the diagram
+    document.getElementById('pfStepWhere').textContent = `Step ${pf.cur + 1} of ${total} · ${cur.station}`;
+    document.getElementById('pfStepTitle').textContent = cur.title;
+    document.getElementById('pfStepPart').textContent = PARTS[cur.part].name;
+    document.getElementById('pfStepCheck').textContent = cur.check;
+    document.getElementById('pfStepWhy').textContent = cur.why;
+    document.getElementById('pfPrev').disabled = pf.cur === 0;
+    const isDone = pf.checked.has(pf.cur);
+    document.getElementById('pfStep').classList.toggle('is-done', isDone);
+    document.getElementById('pfNext').textContent = isDone ? (pf.cur === total - 1 ? 'Done' : 'Next step →') : 'Checked ✓ next →';
+
+    // the scrolling list
+    const keep = list.scrollTop;
     list.replaceChildren();
     let i = 0;
     PREFLIGHT[state.model].forEach(([station, rows]) => {
       const sec = document.createElement('div'); sec.className = 'pf-station';
       sec.innerHTML = `<div class="eyebrow">${station}</div>`;
-      rows.forEach(([, title, what]) => {
+      rows.forEach(([, title]) => {
         const idx = i++;
         const row = document.createElement('div');
         row.className = 'pf-row' + (pf.checked.has(idx) ? ' done' : '') + (idx === pf.cur ? ' cur' : '');
-        row.innerHTML = `<input type="checkbox" aria-label="${title} checked"${pf.checked.has(idx) ? ' checked' : ''}><button>${title}<small>${what}</small></button>`;
+        row.innerHTML = `<input type="checkbox" aria-label="${title} checked"${pf.checked.has(idx) ? ' checked' : ''}><button><span class="n">${idx + 1}</span>${title}</button>`;
         row.querySelector('input').addEventListener('change', e => pfToggle(idx, e.target.checked));
         row.querySelector('button').addEventListener('click', () => pfFocus(idx));
         sec.appendChild(row);
       });
       list.appendChild(sec);
     });
+    // keep the current step visible inside the list without scrolling the page
+    list.scrollTop = keep;
+    const row = list.querySelector('.pf-row.cur');
+    if (row && (row.offsetTop - 30 < list.scrollTop || row.offsetTop + row.offsetHeight > list.scrollTop + list.clientHeight))
+      list.scrollTop = row.offsetTop - list.clientHeight / 3;
   }
+  document.getElementById('pfPrev').addEventListener('click', () => pfFocus(Math.max(0, pf.cur - 1)));
+  document.getElementById('pfNext').addEventListener('click', () => {
+    if (!pf.checked.has(pf.cur)) pfToggle(pf.cur, true);
+    else if (pf.cur < pfItems().length - 1) pfFocus(pf.cur + 1);
+  });
   document.getElementById('pfReset').addEventListener('click', () => { pf.checked.clear(); pfSave(); pfFocus(0); });
   function setModel(id) {
     state.model = id;
@@ -963,8 +1051,10 @@
     state.mode = m;
     document.querySelectorAll('[data-mode]').forEach(b => b.setAttribute('aria-pressed', b.dataset.mode === m));
     const quiz = m === 'quiz', preflight = m === 'preflight';
+    document.body.classList.toggle('pf-mode', preflight);
     document.getElementById('quizCard').classList.toggle('hidden', !quiz);
     document.getElementById('pfCard').classList.toggle('hidden', !preflight);
+    document.getElementById('pfStep').classList.toggle('hidden', !preflight);
     document.getElementById('listCard').classList.toggle('hidden', m !== 'explore');
     document.getElementById('detailCard').classList.toggle('hidden', m !== 'explore');
     document.getElementById('labelToggle').classList.toggle('hidden', quiz);
@@ -990,7 +1080,7 @@
     if (state.mode === 'explore') select(id);
     else if (state.mode === 'quiz') answer(id);
     else {
-      const i = pfItems().findIndex(([part]) => part === id);
+      const i = pfItems().findIndex(it => it.part === id);
       if (i >= 0) pfFocus(i);
     }
   });
