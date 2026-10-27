@@ -127,6 +127,25 @@
   .btn.primary{background:var(--accent);border-color:var(--accent);color:#100a1c;font-weight:600}
   .hidden{display:none!important}
 
+  /* preflight checklist */
+  .pf-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+  .pf-count{font-family:var(--mono);font-size:.78rem;color:var(--muted);white-space:nowrap}
+  .pf-bar{height:6px;background:var(--panel-2);border:1px solid var(--line);border-radius:999px;margin:10px 0 4px;overflow:hidden}
+  .pf-bar span{display:block;height:100%;width:0;background:var(--accent);transition:width .25s}
+  .pf-bar.done span{background:var(--good)}
+  .pf-note{font-size:.76rem;color:var(--faint);margin-top:6px}
+  .pf-done{color:var(--good);font-size:.9rem;margin-top:10px}
+  .pf-list{display:flex;flex-direction:column;gap:14px;margin-top:14px}
+  .pf-station .eyebrow{margin-bottom:4px}
+  .pf-row{display:flex;gap:10px;align-items:flex-start;padding:6px 8px;border-radius:9px;border:1px solid transparent;transition:background .12s}
+  .pf-row input{accent-color:var(--good);width:17px;height:17px;margin-top:3px;flex:none;cursor:pointer}
+  .pf-row button{background:none;border:0;text-align:left;cursor:pointer;flex:1;padding:0;font-size:.88rem;color:var(--text)}
+  .pf-row button small{display:none;color:var(--muted);font-size:.82rem;line-height:1.5;margin-top:3px}
+  .pf-row.cur{background:var(--accent-soft);border-color:rgba(160,107,255,.35)}
+  .pf-row.cur button small{display:block}
+  .pf-row.done button{color:var(--faint);text-decoration:line-through}
+  .pf-row.done.cur button{text-decoration:none;color:var(--muted)}
+
   footer{text-align:center;padding:30px;color:var(--faint);font-size:.82rem;border-top:1px solid var(--line-soft)}
   @media(max-width:600px){.wrap,.nav-inner{padding-left:16px;padding-right:16px}.intro h1{font-size:1.5rem}.brand-name span{display:none}.stage{padding:6px}}
 </style>
@@ -142,7 +161,7 @@
 <main class="wrap">
   <section class="intro">
     <h1>Parts of an airplane</h1>
-    <p>Pick an aircraft, then hover or tap any part to learn its proper name and what it does. Switch between the top and side views, then test yourself in quiz mode.</p>
+    <p>Pick an aircraft, then hover or tap any part to learn its proper name and what it does. Switch between the top and side views, test yourself in quiz mode, or walk around the aircraft with a preflight checklist.</p>
   </section>
 
   <div class="model-row">
@@ -158,6 +177,7 @@
     <div class="seg" role="group" aria-label="Mode">
       <button data-mode="explore" aria-pressed="true">Explore</button>
       <button data-mode="quiz" aria-pressed="false">Quiz</button>
+      <button data-mode="preflight" aria-pressed="false">Preflight</button>
     </div>
     <label class="toggle" id="labelToggle"><input type="checkbox" id="showLabels" checked> Show labels</label>
   </div>
@@ -187,6 +207,18 @@
           <button class="btn" id="skipBtn">Skip</button>
           <button class="btn" id="resetBtn">Reset score</button>
         </div>
+      </div>
+
+      <div class="card hidden" id="pfCard">
+        <div class="pf-head">
+          <div class="eyebrow">Preflight walkaround · <span id="pfModel"></span></div>
+          <span class="pf-count" id="pfCount"></span>
+        </div>
+        <div class="pf-bar" id="pfBar"><span></span></div>
+        <div class="pf-done hidden" id="pfDone">Walkaround complete. Ready to fly!</div>
+        <div class="pf-list" id="pfList"></div>
+        <div class="btn-row"><button class="btn" id="pfReset">Reset checklist</button></div>
+        <div class="pf-note">A simplified walkaround for learning. Real pilots always use the checklist for their exact aircraft.</div>
       </div>
 
       <div class="card" id="listCard">
@@ -642,6 +674,101 @@
   };
 
   const MODELS = { airliner: AIRLINER, jumbo: JUMBO, light: LIGHT, fighter: FIGHTER };
+
+  // ---------- preflight walkarounds: [station, [[part, check, what to look for], ...]] ----------
+  const jetWalkaround = engines => [
+    ['Nose', [
+      ['radome', 'Nose cone', 'No dents, cracks or lightning-strike marks; latches closed.'],
+      ['pitot', 'Pitot tubes', 'Covers removed and openings clear of bugs or ice.'],
+      ['flightdeck', 'Flight deck windows', 'Clean, no cracks or delamination.'],
+      ['noseGear', 'Nose landing gear', 'Tyres inflated and undamaged, strut extended, steering pin removed.'],
+    ]],
+    ['Left side', [
+      ['door', 'Passenger doors', 'Closed and flush with the fuselage, no damage around the seals.'],
+      ['inlet', 'Engine inlet', `Check ${engines} for damaged fan blades and anything sucked into the intake.`],
+      ['engine', 'Engine nacelles', 'Cowl latches closed and locked, no oil or fuel leaks.'],
+      ['pylon', 'Pylons', 'No fluid leaks or loose panels.'],
+      ['exhaust', 'Exhaust nozzles', 'No cracks, heat damage or debris.'],
+      ['slats', 'Leading-edge slats', 'Retracted, undamaged, no dents from bird strikes.'],
+      ['winglet', 'Wingtip and winglet', 'No damage; navigation light lenses intact.'],
+      ['ailerons', 'Ailerons', 'Undamaged, hinges and actuators secure.'],
+      ['flaps', 'Flaps', 'Retracted, tracks and fairings secure, no fuel dripping from the wing.'],
+      ['mainGear', 'Main landing gear', 'Tyre tread and pressure, brake-wear pins visible, no hydraulic leaks.'],
+      ['fairing', 'Wing-to-body fairing', 'Access panels closed and secure.'],
+    ]],
+    ['Tail', [
+      ['elevator', 'Horizontal stabilizer and elevators', 'No damage or ice; elevators free of obstructions.'],
+      ['rudder', 'Vertical stabilizer and rudder', 'No damage; anti-collision light intact.'],
+      ['tailcone', 'Tail cone and APU exhaust', 'Exhaust clear, APU access doors closed.'],
+    ]],
+    ['Right side', [
+      ['fuselage', 'Fuselage', 'Repeat the wing and engine checks on the right; look for dents, missing rivets and closed cargo doors.'],
+    ]],
+  ];
+  const PREFLIGHT = {
+    airliner: jetWalkaround('both engines'),
+    jumbo: (() => {
+      const w = jetWalkaround('all four engines');
+      w[0][1].splice(3, 0, ['upperdeck', 'Upper deck', 'Windows and skin undamaged; upper-deck door closed.']);
+      return w;
+    })(),
+    light: [
+      ['Cabin', [
+        ['cabinDoor', 'Documents and control lock', 'Required documents aboard; control lock removed; ignition off and key out.'],
+        ['flaps', 'Master on, flaps down', 'Check the fuel gauges, lower the flaps fully for the inspection, then master off.'],
+      ]],
+      ['Left wing', [
+        ['flaps', 'Left flap', 'Secure, hinges and push-rod intact.'],
+        ['ailerons', 'Left aileron', 'Moves freely and in the right direction; hinges and cotter pins secure.'],
+        ['navlights', 'Wingtip and navigation light', 'No damage; red light lens intact.'],
+        ['wing', 'Fuel tank and sump', 'Check fuel quantity by eye, cap secure; drain a sample and check for water or dirt.'],
+        ['strut', 'Wing strut', 'Secure at both ends, no dents.'],
+        ['mainGear', 'Left main gear', 'Tyre inflation and wear, brake line and disc in good shape.'],
+        ['wheelPants', 'Wheel fairing', 'Secure, no cracks, not rubbing the tyre.'],
+      ]],
+      ['Nose', [
+        ['cowling', 'Engine oil and cowling', 'Oil level on the dipstick, cap tight; cowling fasteners secure; air intake clear.'],
+        ['propeller', 'Propeller', 'No nicks or cracks in the blades.'],
+        ['spinner', 'Spinner', 'Secure, no cracks.'],
+        ['noseGear', 'Nose gear', 'Strut properly extended, tyre inflated, no leaks.'],
+        ['windscreen', 'Windscreen', 'Clean, no cracks.'],
+      ]],
+      ['Tail', [
+        ['fuselage', 'Fuselage', 'Skin and antennas undamaged; baggage door locked.'],
+        ['elevator', 'Elevators', 'Move freely; hinges secure.'],
+        ['trimTab', 'Trim tab', 'Secure, linkage intact.'],
+        ['rudder', 'Rudder', 'Moves freely; tail tie-down removed.'],
+      ]],
+      ['Right wing', [
+        ['wing', 'Right wing', 'Repeat the left-wing checks: aileron, flap, fuel and sump, strut, wheel.'],
+      ]],
+    ],
+    fighter: [
+      ['Nose', [
+        ['pitot', 'Pitot tube', 'Cover removed and opening clear.'],
+        ['radome', 'Nose cone', 'Latched and undamaged.'],
+        ['canopy', 'Canopy', 'Clean, no cracks or crazing, seals intact; ejection-seat pins accounted for.'],
+        ['intake', 'Engine intake', 'Cover removed; check inside for loose objects (foreign object damage).'],
+        ['noseGear', 'Nose gear', 'Tyre, strut and lights; gear safety pin removed.'],
+      ]],
+      ['Left side', [
+        ['lerx', 'Leading-edge root extension', 'Panels secure, no damage.'],
+        ['lef', 'Leading-edge flaps', 'Undamaged, actuators secure.'],
+        ['missileRail', 'Wingtip missile rail', 'Rail secure; stores and safety pins as briefed.'],
+        ['flaperons', 'Flaperons', 'No damage, no hydraulic leaks.'],
+        ['mainGear', 'Main gear', 'Tyre, brakes and strut; gear pin removed.'],
+      ]],
+      ['Tail', [
+        ['ventralFins', 'Ventral fins', 'Secure, no cracks.'],
+        ['afterburner', 'Afterburner nozzle', 'Nozzle petals intact, no cracks or heat damage.'],
+        ['stabilator', 'Stabilators', 'Undamaged, no fluid leaks at the pivots.'],
+        ['rudder', 'Vertical stabilizer and rudder', 'No damage; lights intact.'],
+      ]],
+      ['Right side', [
+        ['fuselage', 'Fuselage', 'Repeat the wing and gear checks on the right; all access panels closed, no fuel or hydraulic leaks.'],
+      ]],
+    ],
+  };
   const VIEW_NAMES = ['top', 'side'];
   const shapesOf = v => [...(v.under || []), ...(v.halves || []), ...(v.over || [])];
   const partsIn = v => [...new Set(shapesOf(v).map(s => s.part))];
@@ -700,7 +827,7 @@
     if (id) svg.querySelectorAll(`[data-part="${id}"]`).forEach(e => (e.classList.contains('lbl') || e.classList.contains('p')) && e.classList.add(cls));
   }
   function paint() {
-    mark('on', state.mode === 'explore' ? state.selected : null);
+    mark('on', state.mode === 'explore' ? state.selected : state.mode === 'preflight' ? pfCurrent()?.[0] : null);
     mark('hov', state.hover);
     stage.classList.toggle('labels-off', state.mode === 'quiz' || !state.showLabels);
     const here = partsIn(view());
@@ -761,14 +888,70 @@
     quiz: { target: null, correct: 0, total: 0, streak: 0, locked: false, missed: false } };
 
   function select(id) { state.selected = id; showDetail(id); paint(); }
+
+  // ---------- preflight ----------
+  const pf = { checked: new Set(), cur: 0 };
+  const pfItems = () => PREFLIGHT[state.model].flatMap(([, items]) => items);
+  const pfCurrent = () => pfItems()[pf.cur];
+  const pfKey = () => 'airplane-preflight-' + state.model;
+  function pfSave() { try { localStorage.setItem(pfKey(), JSON.stringify([...pf.checked])); } catch (e) {} }
+  function pfLoad() {
+    pf.checked = new Set();
+    try { JSON.parse(localStorage.getItem(pfKey()) || '[]').forEach(i => pf.checked.add(i)); } catch (e) {}
+    pf.cur = pfFirstOpen();
+  }
+  function pfFirstOpen(from = 0) {
+    const n = pfItems().length;
+    for (let k = 0; k < n; k++) { const i = (from + k) % n; if (!pf.checked.has(i)) return i; }
+    return Math.min(from, n - 1);
+  }
+  function pfFocus(i) {
+    pf.cur = i;
+    const part = pfCurrent()[0];
+    if (!partsIn(view()).includes(part)) setView(viewsWith(part)[0]);
+    pfRender(); paint();
+  }
+  function pfToggle(i, on) {
+    on ? pf.checked.add(i) : pf.checked.delete(i);
+    pfSave();
+    pfFocus(on && i === pf.cur ? pfFirstOpen(i + 1) : pf.cur);
+  }
+  function pfRender() {
+    const list = document.getElementById('pfList');
+    const items = pfItems(), done = pf.checked.size, total = items.length;
+    document.getElementById('pfModel').textContent = model().name.toLowerCase();
+    document.getElementById('pfCount').textContent = `${done} / ${total}`;
+    document.querySelector('#pfBar span').style.width = (100 * done / total) + '%';
+    document.getElementById('pfBar').classList.toggle('done', done === total);
+    document.getElementById('pfDone').classList.toggle('hidden', done !== total);
+    list.replaceChildren();
+    let i = 0;
+    PREFLIGHT[state.model].forEach(([station, rows]) => {
+      const sec = document.createElement('div'); sec.className = 'pf-station';
+      sec.innerHTML = `<div class="eyebrow">${station}</div>`;
+      rows.forEach(([, title, what]) => {
+        const idx = i++;
+        const row = document.createElement('div');
+        row.className = 'pf-row' + (pf.checked.has(idx) ? ' done' : '') + (idx === pf.cur ? ' cur' : '');
+        row.innerHTML = `<input type="checkbox" aria-label="${title} checked"${pf.checked.has(idx) ? ' checked' : ''}><button>${title}<small>${what}</small></button>`;
+        row.querySelector('input').addEventListener('change', e => pfToggle(idx, e.target.checked));
+        row.querySelector('button').addEventListener('click', () => pfFocus(idx));
+        sec.appendChild(row);
+      });
+      list.appendChild(sec);
+    });
+  }
+  document.getElementById('pfReset').addEventListener('click', () => { pf.checked.clear(); pfSave(); pfFocus(0); });
   function setModel(id) {
     state.model = id;
     modelSeg.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', b.dataset.model === id));
     document.getElementById('modelBlurb').textContent = model().example;
     try { history.replaceState(null, '', '#' + id); } catch (e) {}
     buildList();
+    pfLoad(); pfRender();
     select(state.selected && modelParts().has(state.selected) ? state.selected : null);
     setView(state.view);
+    if (state.mode === 'preflight') pfFocus(pf.cur);
   }
   function setView(v) {
     state.view = v;
@@ -779,13 +962,15 @@
   function setMode(m) {
     state.mode = m;
     document.querySelectorAll('[data-mode]').forEach(b => b.setAttribute('aria-pressed', b.dataset.mode === m));
-    const quiz = m === 'quiz';
+    const quiz = m === 'quiz', preflight = m === 'preflight';
     document.getElementById('quizCard').classList.toggle('hidden', !quiz);
-    document.getElementById('listCard').classList.toggle('hidden', quiz);
-    document.getElementById('detailCard').classList.toggle('hidden', quiz);
+    document.getElementById('pfCard').classList.toggle('hidden', !preflight);
+    document.getElementById('listCard').classList.toggle('hidden', m !== 'explore');
+    document.getElementById('detailCard').classList.toggle('hidden', m !== 'explore');
     document.getElementById('labelToggle').classList.toggle('hidden', quiz);
-    document.getElementById('hint').textContent = quiz ? 'click the part named in the quiz' : 'click a part';
+    document.getElementById('hint').textContent = quiz ? 'click the part named in the quiz' : preflight ? 'click a part to jump to its check' : 'click a part';
     if (quiz) nextQuestion(); else { mark('ok'); mark('no'); }
+    if (preflight) pfFocus(pf.cur);
     paint();
   }
 
@@ -793,7 +978,7 @@
   svg.addEventListener('pointermove', e => {
     const id = partAt(e);
     if (id !== state.hover) { state.hover = id; mark('hov', id); }
-    if (id && state.mode === 'explore' && e.pointerType === 'mouse') {
+    if (id && state.mode !== 'quiz' && e.pointerType === 'mouse') {
       tip.textContent = PARTS[id].name; tip.classList.add('show');
       tip.style.left = (e.clientX + 14) + 'px'; tip.style.top = (e.clientY + 14) + 'px';
     } else tip.classList.remove('show');
@@ -802,7 +987,12 @@
   svg.addEventListener('click', e => {
     const id = partAt(e);
     if (!id) return;
-    if (state.mode === 'explore') select(id); else answer(id);
+    if (state.mode === 'explore') select(id);
+    else if (state.mode === 'quiz') answer(id);
+    else {
+      const i = pfItems().findIndex(([part]) => part === id);
+      if (i >= 0) pfFocus(i);
+    }
   });
 
   // ---------- quiz ----------
