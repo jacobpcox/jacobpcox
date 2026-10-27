@@ -10,6 +10,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Plane Parts">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="airplane.webmanifest">
+<link rel="apple-touch-icon" href="airplane-icons/apple-touch-icon.png">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230b0c0f'/%3E%3Ctext x='16' y='22' font-family='ui-monospace,monospace' font-size='15' font-weight='700' fill='%235b8cff' text-anchor='middle'%3EJC%3C/text%3E%3C/svg%3E">
 <style>
   *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
@@ -853,6 +855,10 @@
   document.querySelectorAll('[data-mode]').forEach(b => b.addEventListener('click', () => setMode(b.dataset.mode)));
   document.getElementById('showLabels').addEventListener('change', e => { state.showLabels = e.target.checked; paint(); });
   document.getElementById('yr').textContent = new Date().getFullYear();
+
+  // Installable app: cache the page for offline use when served over http(s).
+  if ('serviceWorker' in navigator && location.protocol.startsWith('http'))
+    navigator.serviceWorker.register('airplane-sw.js', { scope: './airplane' }).catch(() => {});
 
   const fromHash = location.hash.slice(1);
   setModel(MODELS[fromHash] ? fromHash : 'airliner');
