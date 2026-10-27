@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Airplane Parts — Jacob Cox</title>
-<meta name="description" content="An interactive diagram for learning the proper names of the parts of an airplane, with an explore mode and a quiz.">
+<meta name="description" content="An interactive diagram for learning the proper names of the parts of an airplane: an airliner, a jumbo jet, a light aircraft and a fighter jet, with an explore mode and a quiz.">
 <meta name="theme-color" content="#0d0a14">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230b0c0f'/%3E%3Ctext x='16' y='22' font-family='ui-monospace,monospace' font-size='15' font-weight='700' fill='%235b8cff' text-anchor='middle'%3EJC%3C/text%3E%3C/svg%3E">
 <style>
@@ -42,7 +42,9 @@
   .seg button[aria-pressed="true"]{background:var(--accent);color:#100a1c;font-weight:600}
   .toggle{display:inline-flex;align-items:center;gap:.5rem;font-size:.84rem;color:var(--muted);cursor:pointer;user-select:none}
   .toggle input{accent-color:var(--accent);width:15px;height:15px}
-  .toolbar .spacer{flex:1}
+  .model-row{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;margin-bottom:12px}
+  .model-row .seg{flex-wrap:wrap}
+  .model-blurb{font-size:.84rem;color:var(--faint)}
 
   .layout{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:22px;align-items:start;padding-bottom:40px}
   @media(max-width:960px){.layout{grid-template-columns:1fr}}
@@ -134,8 +136,13 @@
 <main class="wrap">
   <section class="intro">
     <h1>Parts of an airplane</h1>
-    <p>Hover or tap any part of the airliner to learn its proper name and what it does. Switch between the top and side views, then test yourself in quiz mode.</p>
+    <p>Pick an aircraft, then hover or tap any part to learn its proper name and what it does. Switch between the top and side views, then test yourself in quiz mode.</p>
   </section>
+
+  <div class="model-row">
+    <div class="seg" role="group" aria-label="Aircraft" id="modelSeg"></div>
+    <div class="model-blurb" id="modelBlurb"></div>
+  </div>
 
   <div class="toolbar">
     <div class="seg" role="group" aria-label="View">
@@ -177,7 +184,7 @@
       </div>
 
       <div class="card" id="listCard">
-        <div class="eyebrow">All parts</div>
+        <div class="eyebrow">All parts · <span id="partCount"></span></div>
         <div class="plist" id="plist"></div>
       </div>
 
@@ -198,38 +205,57 @@
 
 <script>
 (() => {
-  // ---------- part reference ----------
+  // ---------- part reference (shared by every model) ----------
   const GROUPS = ['Fuselage', 'Wings', 'Tail (empennage)', 'Engines', 'Landing gear'];
   const PARTS = {
     fuselage:  { name: 'Fuselage', group: 'Fuselage', desc: 'The main body of the aircraft. It carries the crew, passengers and cargo, and the wings, tail and landing gear all attach to it.' },
-    radome:    { name: 'Nose cone', aka: 'Radome', group: 'Fuselage', desc: 'The rounded nose, made of a radar-transparent composite. It streamlines the front of the aircraft and protects the weather-radar antenna inside.' },
+    radome:    { name: 'Nose cone', aka: 'Radome', group: 'Fuselage', desc: 'The rounded nose, made of a radar-transparent composite. It streamlines the front of the aircraft and protects the radar antenna inside.' },
     flightdeck:{ name: 'Flight deck', aka: 'Cockpit', group: 'Fuselage', desc: 'Where the pilots sit and fly the aircraft. The windscreen panels are heated, multi-layer glass built to survive bird strikes.' },
-    pitot:     { name: 'Pitot tube', group: 'Fuselage', desc: 'A small forward-facing probe near the nose. It measures ram-air pressure, which the instruments turn into airspeed. Airliners carry several for redundancy.' },
-    door:      { name: 'Passenger door', aka: 'Cabin door', group: 'Fuselage', desc: 'The doors used for boarding and emergency exit. Most are "plug" doors: cabin pressure pushes them into the frame, so they cannot open in flight.' },
-    windows:   { name: 'Cabin windows', group: 'Fuselage', desc: 'Small, rounded windows along the passenger cabin. The round corners spread out the stress from pressurisation.' },
+    upperdeck: { name: 'Upper deck', aka: 'Hump', group: 'Fuselage', desc: 'The raised front section of a jumbo jet\'s fuselage. It holds the flight deck and a second passenger cabin above the main deck.' },
+    canopy:    { name: 'Canopy', group: 'Fuselage', desc: 'The clear bubble over a fighter\'s cockpit. It gives the pilot an all-round view and is blown clear before the seat ejects.' },
+    windscreen:{ name: 'Windscreen', aka: 'Windshield', group: 'Fuselage', desc: 'The curved front window the pilot looks through. On light aircraft it is usually a single piece of acrylic.' },
+    pitot:     { name: 'Pitot tube', group: 'Fuselage', desc: 'A small forward-facing probe. It measures ram-air pressure, which the instruments turn into airspeed. Larger aircraft carry several for redundancy.' },
+    door:      { name: 'Passenger door', aka: 'Cabin door', group: 'Fuselage', desc: 'The doors used for boarding and emergency exit. Most airliner doors are "plug" doors: cabin pressure pushes them into the frame, so they cannot open in flight.' },
+    cabinDoor: { name: 'Cabin door', group: 'Fuselage', desc: 'A hinged door on each side of a light aircraft\'s cabin, used by the pilot and passengers to climb in.' },
+    windows:   { name: 'Cabin windows', group: 'Fuselage', desc: 'The windows along the passenger cabin. On pressurised aircraft they have rounded corners to spread out the stress from pressurisation.' },
     fairing:   { name: 'Wing-to-body fairing', aka: 'Belly fairing', group: 'Fuselage', desc: 'The smooth bulge where the wings meet the fuselage. It cuts drag and covers the main-gear bays and air-conditioning packs.' },
     tailcone:  { name: 'Tail cone', aka: 'APU exhaust', group: 'Fuselage', desc: 'The tapered end of the fuselage. It houses the Auxiliary Power Unit (APU), a small turbine that supplies electrical power and air when the main engines are off.' },
 
-    wing:      { name: 'Wing', group: 'Wings', desc: 'Produces the lift that holds the aircraft up. Airliner wings also hold most of the fuel in tanks built into their structure.' },
+    wing:      { name: 'Wing', group: 'Wings', desc: 'Produces the lift that holds the aircraft up. Most aircraft also carry their fuel in tanks inside the wings.' },
+    lerx:      { name: 'Leading-edge root extension', aka: 'LERX', group: 'Wings', desc: 'A narrow strake blending the fuselage into the front of the wing. At high angles of attack it sheds strong vortices that keep air flowing over the wing.' },
     slats:     { name: 'Leading-edge slats', group: 'Wings', tag: 'High-lift device', desc: 'Panels on the front edge of the wing that slide forward and down for takeoff and landing, letting the wing fly slower without stalling.' },
+    lef:       { name: 'Leading-edge flaps', group: 'Wings', tag: 'High-lift device', desc: 'Hinged sections of the front edge that droop automatically as speed and angle of attack change, improving lift and manoeuvrability.' },
     flaps:     { name: 'Flaps', group: 'Wings', tag: 'High-lift device', desc: 'Panels on the inner trailing edge that extend back and down. They add lift and drag, so the aircraft can take off and land at lower speeds.' },
     ailerons:  { name: 'Ailerons', group: 'Wings', tag: 'Primary flight control', axis: 'Roll', desc: 'Hinged surfaces on the outer trailing edge. They move in opposite directions (one up, one down) to roll the aircraft into a bank.' },
+    flaperons: { name: 'Flaperons', group: 'Wings', tag: 'Primary flight control', axis: 'Roll', desc: 'Trailing-edge surfaces that do the job of both flaps and ailerons: they droop together for extra lift and move in opposite directions to roll.' },
     spoilers:  { name: 'Spoilers', aka: 'Speed brakes', group: 'Wings', tag: 'Secondary flight control', axis: 'Roll (assist)', desc: 'Panels on top of the wing that rise to "spoil" lift and add drag. They slow the aircraft in flight, help the ailerons roll it, and dump lift on touchdown.' },
     winglet:   { name: 'Winglet', group: 'Wings', desc: 'The upturned tip of the wing. It weakens wingtip vortices, which reduces drag and saves fuel.' },
+    strut:     { name: 'Wing strut', group: 'Wings', desc: 'A diagonal brace from the lower fuselage to the wing. It carries part of the wing\'s load, so the wing itself can be lighter.' },
+    missileRail:{ name: 'Wingtip missile rail', aka: 'Launcher rail', group: 'Wings', desc: 'A launch rail on the wingtip for air-to-air missiles. Even when empty it acts like a small end plate on the wing.' },
     navlights: { name: 'Navigation lights', aka: 'Position lights', group: 'Wings', desc: 'Red on the left (port) wingtip and green on the right (starboard), so other pilots can tell which way the aircraft is heading at night.' },
 
     hstab:     { name: 'Horizontal stabilizer', aka: 'Tailplane', group: 'Tail (empennage)', desc: 'The small horizontal wing at the tail. It keeps the aircraft stable in pitch, and on airliners the whole surface moves to trim the aircraft.' },
     elevator:  { name: 'Elevators', group: 'Tail (empennage)', tag: 'Primary flight control', axis: 'Pitch', desc: 'Hinged surfaces on the back of the horizontal stabilizer. Pulling back on the controls raises them, which pitches the nose up.' },
+    stabilator:{ name: 'Stabilator', aka: 'All-moving tail', group: 'Tail (empennage)', tag: 'Primary flight control', axis: 'Pitch (and roll)', desc: 'A horizontal tail that pivots as one piece instead of having a separate elevator. On fighters the two sides can also move in opposite directions to help roll.' },
+    trimTab:   { name: 'Trim tab', group: 'Tail (empennage)', tag: 'Secondary flight control', desc: 'A small adjustable tab on the elevator. The pilot sets it so the aircraft holds its attitude without constant pressure on the controls.' },
     vstab:     { name: 'Vertical stabilizer', aka: 'Fin', group: 'Tail (empennage)', desc: 'The tall fin at the tail. Like the feathers on an arrow, it keeps the nose pointed into the airflow (yaw stability).' },
-    rudder:    { name: 'Rudder', group: 'Tail (empennage)', tag: 'Primary flight control', axis: 'Yaw', desc: 'The hinged back of the vertical stabilizer, worked by the pilots\' foot pedals. It swings the nose left or right, and matters most in crosswinds and engine failures.' },
+    dorsal:    { name: 'Dorsal fin', group: 'Tail (empennage)', desc: 'A low extension running forward from the vertical stabilizer. It adds directional stability when the aircraft is sideslipping.' },
+    ventralFins:{ name: 'Ventral fins', group: 'Tail (empennage)', desc: 'Small fins under the rear fuselage that add directional stability at high speeds and high angles of attack.' },
+    rudder:    { name: 'Rudder', group: 'Tail (empennage)', tag: 'Primary flight control', axis: 'Yaw', desc: 'The hinged back of the vertical stabilizer, worked by the pilot\'s foot pedals. It swings the nose left or right, and matters most in crosswinds and engine failures.' },
 
-    engine:    { name: 'Engine nacelle', aka: 'Cowling', group: 'Engines', desc: 'The streamlined casing around the turbofan engine. Its panels open on the ground so mechanics can reach the engine.' },
+    engine:    { name: 'Engine nacelle', aka: 'Cowling', group: 'Engines', desc: 'The streamlined casing around a turbofan engine. Its panels open on the ground so mechanics can reach the engine.' },
     inlet:     { name: 'Engine inlet', aka: 'Intake', group: 'Engines', desc: 'The front opening of the nacelle. Its smooth lip delivers even, steady airflow to the fan.' },
+    intake:    { name: 'Engine intake', group: 'Engines', desc: 'The opening under the fuselage that feeds air to the jet engine. Sitting under the nose keeps its airflow smooth even at high angles of attack.' },
     exhaust:   { name: 'Exhaust nozzle', group: 'Engines', desc: 'The back of the engine, where hot core exhaust and bypass air leave at high speed to produce thrust.' },
+    afterburner:{ name: 'Afterburner nozzle', group: 'Engines', desc: 'The adjustable nozzle at the tail. With the afterburner lit, extra fuel burns in the exhaust for a big burst of thrust, and the nozzle opens wider.' },
     pylon:     { name: 'Pylon', aka: 'Engine strut', group: 'Engines', desc: 'The strut that hangs the engine below the wing. Fuel lines, wiring and bleed-air ducts run through it.' },
+    cowling:   { name: 'Engine cowling', group: 'Engines', desc: 'The removable cover around a piston engine. It streamlines the nose and guides cooling air over the cylinders.' },
+    propeller: { name: 'Propeller', aka: 'Prop', group: 'Engines', desc: 'Spinning blades driven by the engine. Each blade is a small twisted wing that pulls the aircraft forward.' },
+    spinner:   { name: 'Spinner', group: 'Engines', desc: 'The streamlined cone over the propeller hub. It smooths the airflow into the engine cowling.' },
 
-    noseGear:  { name: 'Nose landing gear', group: 'Landing gear', desc: 'The landing gear under the nose. It is steerable, and the pilots use it to steer while taxiing.' },
-    mainGear:  { name: 'Main landing gear', group: 'Landing gear', desc: 'The main wheels under the wings. They carry most of the aircraft\'s weight and hold the brakes. They retract into the belly after takeoff.' },
+    noseGear:  { name: 'Nose landing gear', group: 'Landing gear', desc: 'The landing gear under the nose. It is steerable, and the pilot uses it to steer while taxiing.' },
+    mainGear:  { name: 'Main landing gear', group: 'Landing gear', desc: 'The main wheels, set close to the centre of gravity. They carry most of the aircraft\'s weight and have the brakes. On most jets they fold up into the body after takeoff.' },
+    wheelPants:{ name: 'Wheel fairings', aka: 'Wheel pants', group: 'Landing gear', desc: 'Streamlined covers over fixed landing-gear wheels. They cut drag and add a few knots of cruise speed.' },
   };
 
   // ---------- geometry helpers ----------
@@ -241,106 +267,382 @@
     outline: [le0, le1, te1, te0],
   });
   const pts = arr => arr.map(p => p.map(n => n.toFixed(1)).join(',')).join(' ');
-  const mirror = ([x, y]) => [1000 - x, y];
+  const mirror = ([x, y]) => [1000 - x, y];   // top views are centred on x=500
+  const rect = (x, y, width, height, rx = 0) => ({ el: 'rect', a: { x, y, width, height, rx } });
+  const wheel = (cx, cy, r) => `M${cx - r},${cy} a${r},${r} 0 1,0 ${2 * r},0 a${r},${r} 0 1,0 ${-2 * r},0`;
+  const windowRow = (x0, x1, y, step = 16) => { const d = []; for (let x = x0; x <= x1; x += step) d.push(`M${x},${y} h8 v11 h-8 Z`); return d.join(' '); };
+  // Each view: `under` is drawn first, then `halves` (right side, mirrored to the left in top views), then `over`.
 
-  // ---------- top view (nose up, plane centred on x=500) ----------
-  const W = surface([522, 268], [840, 430], [522, 392], [855, 465]);
-  const H = surface([525, 560], [665, 612], [522, 626], [676, 632]);
-  const topHalf = [ // drawn on the right wing and mirrored onto the left
-    { part: 'engine', el: 'rect', a: { x: 623, y: 245, width: 30, height: 100, rx: 14 } },
-    { part: 'wing', poly: W.outline },
-    { part: 'slats', poly: W.quad(.18, .95, 0, .12), cls: 'surf' },
-    { part: 'spoilers', poly: W.quad(.16, .6, .6, .76), cls: 'surf2' },
-    { part: 'flaps', poly: W.quad(.04, .62, .78, 1), cls: 'surf' },
-    { part: 'ailerons', poly: W.quad(.66, .93, .76, 1), cls: 'surf' },
-    { part: 'winglet', poly: [[840, 430], [852, 428], [868, 462], [855, 465]], cls: 'surf2' },
-    { part: 'hstab', poly: H.outline },
-    { part: 'elevator', poly: H.quad(.04, .97, .62, 1), cls: 'surf' },
-  ];
-  const TOP = {
-    viewBox: '-40 0 1080 700',
-    halves: topHalf,
-    shapes: [
-      { part: 'fuselage', d: 'M500,40 C520,45 530,90 530,140 L530,560 C530,600 515,640 500,662 C485,640 470,600 470,560 L470,140 C470,90 480,45 500,40 Z' },
-      { part: 'radome', d: 'M500,40 C514,44 522,60 525,76 Q500,70 475,76 C478,60 486,44 500,40 Z', cls: 'surf' },
-      { part: 'flightdeck', d: 'M482,100 Q500,86 518,100 L516,108 Q500,97 484,108 Z', cls: 'glass' },
-      { part: 'vstab', d: 'M496,540 L504,540 L505,650 L500,670 L495,650 Z', cls: 'surf2' },
-      { part: 'navlights', el: 'circle', a: { cx: 845, cy: 436, r: 5 }, cls: 'light-g' },
-      { part: 'navlights', el: 'circle', a: { cx: 155, cy: 436, r: 5 }, cls: 'light-r' },
-    ],
-    labels: [
-      { part: 'radome', a: [500, 58], l: [570, 38] },
-      { part: 'flightdeck', a: [500, 99], l: [420, 92], end: true },
-      { part: 'fuselage', a: [500, 200], l: [420, 190], end: true },
-      { part: 'engine', a: [638, 262], l: [700, 222] },
-      { part: 'slats', a: W.at(.8, .06), l: [860, 375] },
-      { part: 'winglet', a: [858, 450], l: [905, 440] },
-      { part: 'ailerons', a: W.at(.8, .88), l: [860, 515] },
-      { part: 'flaps', a: W.at(.33, .9), l: [690, 520] },
-      { part: 'hstab', a: H.at(.5, .3), l: [720, 585] },
-      { part: 'elevator', a: H.at(.6, .82), l: [720, 650] },
-      { part: 'wing', a: mirror(W.at(.5, .4)), l: [170, 300], end: true },
-      { part: 'spoilers', a: mirror(W.at(.4, .68)), l: [200, 505], end: true },
-      { part: 'navlights', a: [155, 436], l: [95, 405], end: true },
-      { part: 'vstab', a: [500, 625], l: [420, 682], end: true },
-    ],
+  // ---------- narrow-body airliner ----------
+  const AW = surface([522, 268], [840, 430], [522, 392], [855, 465]);
+  const AH = surface([525, 560], [665, 612], [522, 626], [676, 632]);
+  const AF = surface([630, 164], [750, 42], [812, 178], [796, 42]);
+  const AIRLINER = {
+    name: 'Airliner', example: 'Narrow-body twinjet, like the A320 or 737',
+    top: {
+      viewBox: '-40 0 1080 700',
+      halves: [
+        { part: 'engine', ...rect(623, 245, 30, 100, 14) },
+        { part: 'wing', poly: AW.outline },
+        { part: 'slats', poly: AW.quad(.18, .95, 0, .12), cls: 'surf' },
+        { part: 'spoilers', poly: AW.quad(.16, .6, .6, .76), cls: 'surf2' },
+        { part: 'flaps', poly: AW.quad(.04, .62, .78, 1), cls: 'surf' },
+        { part: 'ailerons', poly: AW.quad(.66, .93, .76, 1), cls: 'surf' },
+        { part: 'winglet', poly: [[840, 430], [852, 428], [868, 462], [855, 465]], cls: 'surf2' },
+        { part: 'hstab', poly: AH.outline },
+        { part: 'elevator', poly: AH.quad(.04, .97, .62, 1), cls: 'surf' },
+      ],
+      over: [
+        { part: 'fuselage', d: 'M500,40 C520,45 530,90 530,140 L530,560 C530,600 515,640 500,662 C485,640 470,600 470,560 L470,140 C470,90 480,45 500,40 Z' },
+        { part: 'radome', d: 'M500,40 C514,44 522,60 525,76 Q500,70 475,76 C478,60 486,44 500,40 Z', cls: 'surf' },
+        { part: 'flightdeck', d: 'M482,100 Q500,86 518,100 L516,108 Q500,97 484,108 Z', cls: 'glass' },
+        { part: 'vstab', d: 'M496,540 L504,540 L505,650 L500,670 L495,650 Z', cls: 'surf2' },
+        { part: 'navlights', el: 'circle', a: { cx: 845, cy: 436, r: 5 }, cls: 'light-g' },
+        { part: 'navlights', el: 'circle', a: { cx: 155, cy: 436, r: 5 }, cls: 'light-r' },
+      ],
+      labels: [
+        { part: 'radome', a: [500, 58], l: [570, 38] },
+        { part: 'flightdeck', a: [500, 99], l: [420, 92], end: true },
+        { part: 'fuselage', a: [500, 200], l: [420, 190], end: true },
+        { part: 'engine', a: [638, 262], l: [700, 222] },
+        { part: 'slats', a: AW.at(.8, .06), l: [860, 375] },
+        { part: 'winglet', a: [858, 450], l: [905, 440] },
+        { part: 'ailerons', a: AW.at(.8, .88), l: [860, 515] },
+        { part: 'flaps', a: AW.at(.33, .9), l: [690, 520] },
+        { part: 'hstab', a: AH.at(.5, .3), l: [720, 585] },
+        { part: 'elevator', a: AH.at(.6, .82), l: [720, 650] },
+        { part: 'wing', a: mirror(AW.at(.5, .4)), l: [170, 300], end: true },
+        { part: 'spoilers', a: mirror(AW.at(.4, .68)), l: [200, 505], end: true },
+        { part: 'navlights', a: [155, 436], l: [95, 405], end: true },
+        { part: 'vstab', a: [500, 625], l: [420, 682], end: true },
+      ],
+    },
+    side: {
+      viewBox: '-80 20 1090 370',
+      under: [
+        { part: 'vstab', poly: AF.outline },
+        { part: 'rudder', poly: AF.quad(.03, 1, .66, 1), cls: 'surf' },
+        { part: 'fuselage', d: 'M40,205 C40,180 70,164 125,163 L700,163 C760,164 800,172 826,179 L826,197 C790,204 720,232 650,236 L130,236 C80,236 40,226 40,205 Z' },
+        { part: 'windows', d: windowRow(178, 624, 181), cls: 'glass' },
+        { part: 'door', ...rect(146, 170, 17, 44, 4), cls: 'surf' },
+        { part: 'door', ...rect(636, 170, 16, 40, 4), cls: 'surf' },
+        { part: 'radome', d: 'M82,165 C58,170 40,186 40,205 C40,221 56,233 82,235 C72,215 72,185 82,165 Z', cls: 'surf' },
+        { part: 'flightdeck', d: 'M92,188 L104,174 L128,172 L128,186 Z', cls: 'glass' },
+        { part: 'pitot', d: 'M86,208 L86,214 L62,214', cls: 'line' },
+        { part: 'tailcone', d: 'M822,179 L856,186 L858,190 L822,197 Z', cls: 'surf2' },
+        { part: 'hstab', poly: [[690, 199], [762, 188], [812, 188], [812, 196], [770, 202]] },
+        { part: 'elevator', poly: [[790, 188], [812, 188], [812, 196], [790, 198]], cls: 'surf' },
+        { part: 'fairing', d: 'M296,234 C340,254 500,256 548,234 Z', cls: 'surf2' },
+        { part: 'wing', poly: [[300, 227], [560, 222], [600, 226], [560, 232], [320, 236]] },
+        { part: 'winglet', d: 'M585,227 L604,172 L616,172 L600,229 Z', cls: 'surf2' },
+        { part: 'pylon', d: 'M335,247 L352,231 L455,226 L405,248 Z', cls: 'surf2' },
+        { part: 'noseGear', d: 'M117,236 h6 v62 h-6 Z ' + wheel(120, 306, 11) },
+        { part: 'mainGear', d: 'M467,246 h6 v52 h-6 Z ' + wheel(457, 304, 13) + wheel(483, 304, 13) },
+        { part: 'engine', ...rect(292, 246, 108, 40, 18) },
+        { part: 'inlet', el: 'ellipse', a: { cx: 295, cy: 266, rx: 7, ry: 19 }, cls: 'surf' },
+        { part: 'exhaust', d: 'M400,254 L428,262 L428,270 L400,278 Z', cls: 'surf2' },
+      ],
+      labels: [
+        { part: 'radome', a: [55, 205], l: [10, 205], end: true },
+        { part: 'pitot', a: [64, 214], l: [30, 252], end: true },
+        { part: 'flightdeck', a: [112, 180], l: [90, 128], end: true },
+        { part: 'door', a: [154, 192], l: [170, 108] },
+        { part: 'windows', a: [330, 186], l: [330, 128] },
+        { part: 'fuselage', a: [470, 212], l: [480, 140] },
+        { part: 'winglet', a: [608, 190], l: [600, 118] },
+        { part: 'vstab', a: [720, 110], l: [640, 60], end: true },
+        { part: 'rudder', a: [795, 100], l: [850, 80] },
+        { part: 'tailcone', a: [845, 188], l: [880, 158] },
+        { part: 'elevator', a: [802, 193], l: [880, 218] },
+        { part: 'hstab', a: [740, 196], l: [760, 265] },
+        { part: 'wing', a: [560, 226], l: [640, 240] },
+        { part: 'pylon', a: [400, 238], l: [560, 270] },
+        { part: 'fairing', a: [430, 247], l: [560, 300] },
+        { part: 'inlet', a: [289, 266], l: [230, 282], end: true },
+        { part: 'noseGear', a: [120, 306], l: [120, 345] },
+        { part: 'engine', a: [345, 280], l: [330, 345] },
+        { part: 'mainGear', a: [483, 304], l: [520, 345] },
+        { part: 'exhaust', a: [420, 268], l: [445, 372] },
+      ],
+    },
   };
 
-  // ---------- side view (nose left) ----------
-  const F = surface([630, 164], [750, 42], [812, 178], [796, 42]);
-  const windows = [];
-  for (let x = 178; x <= 624; x += 16) windows.push(`M${x},181 h8 v11 h-8 Z`);
-  const SIDE = {
-    viewBox: '-80 20 1090 370',
-    halves: [],
-    shapes: [
-      { part: 'vstab', poly: F.outline },
-      { part: 'rudder', poly: F.quad(.03, 1, .66, 1), cls: 'surf' },
-      { part: 'fuselage', d: 'M40,205 C40,180 70,164 125,163 L700,163 C760,164 800,172 826,179 L826,197 C790,204 720,232 650,236 L130,236 C80,236 40,226 40,205 Z' },
-      { part: 'windows', d: windows.join(' '), cls: 'glass' },
-      { part: 'door', el: 'rect', a: { x: 146, y: 170, width: 17, height: 44, rx: 4 }, cls: 'surf' },
-      { part: 'door', el: 'rect', a: { x: 636, y: 170, width: 16, height: 40, rx: 4 }, cls: 'surf' },
-      { part: 'radome', d: 'M82,165 C58,170 40,186 40,205 C40,221 56,233 82,235 C72,215 72,185 82,165 Z', cls: 'surf' },
-      { part: 'flightdeck', d: 'M92,188 L104,174 L128,172 L128,186 Z', cls: 'glass' },
-      { part: 'pitot', d: 'M86,208 L86,214 L62,214', cls: 'line' },
-      { part: 'tailcone', d: 'M822,179 L856,186 L858,190 L822,197 Z', cls: 'surf2' },
-      { part: 'hstab', poly: [[690, 199], [762, 188], [812, 188], [812, 196], [770, 202]] },
-      { part: 'elevator', poly: [[790, 188], [812, 188], [812, 196], [790, 198]], cls: 'surf' },
-      { part: 'fairing', d: 'M296,234 C340,254 500,256 548,234 Z', cls: 'surf2' },
-      { part: 'wing', poly: [[300, 227], [560, 222], [600, 226], [560, 232], [320, 236]] },
-      { part: 'winglet', d: 'M585,227 L604,172 L616,172 L600,229 Z', cls: 'surf2' },
-      { part: 'pylon', d: 'M335,247 L352,231 L455,226 L405,248 Z', cls: 'surf2' },
-      { part: 'noseGear', d: 'M117,236 h6 v62 h-6 Z M120,306 m-11,0 a11,11 0 1,0 22,0 a11,11 0 1,0 -22,0' },
-      { part: 'mainGear', d: 'M467,246 h6 v52 h-6 Z M457,304 m-13,0 a13,13 0 1,0 26,0 a13,13 0 1,0 -26,0 M483,304 m-13,0 a13,13 0 1,0 26,0 a13,13 0 1,0 -26,0' },
-      { part: 'engine', el: 'rect', a: { x: 292, y: 246, width: 108, height: 40, rx: 18 } },
-      { part: 'inlet', el: 'ellipse', a: { cx: 295, cy: 266, rx: 7, ry: 19 }, cls: 'surf' },
-      { part: 'exhaust', d: 'M400,254 L428,262 L428,270 L400,278 Z', cls: 'surf2' },
-    ],
-    labels: [
-      { part: 'radome', a: [55, 205], l: [10, 205], end: true },
-      { part: 'pitot', a: [64, 214], l: [30, 252], end: true },
-      { part: 'flightdeck', a: [112, 180], l: [90, 128], end: true },
-      { part: 'door', a: [154, 192], l: [170, 108] },
-      { part: 'windows', a: [330, 186], l: [330, 128] },
-      { part: 'fuselage', a: [470, 212], l: [480, 140] },
-      { part: 'winglet', a: [608, 190], l: [600, 118] },
-      { part: 'vstab', a: [720, 110], l: [640, 60], end: true },
-      { part: 'rudder', a: [795, 100], l: [850, 80] },
-      { part: 'tailcone', a: [845, 188], l: [880, 158] },
-      { part: 'elevator', a: [802, 193], l: [880, 218] },
-      { part: 'hstab', a: [740, 196], l: [760, 265] },
-      { part: 'wing', a: [560, 226], l: [640, 240] },
-      { part: 'pylon', a: [400, 238], l: [560, 270] },
-      { part: 'fairing', a: [430, 247], l: [560, 300] },
-      { part: 'inlet', a: [289, 266], l: [230, 282], end: true },
-      { part: 'noseGear', a: [120, 306], l: [120, 345] },
-      { part: 'engine', a: [345, 280], l: [330, 345] },
-      { part: 'mainGear', a: [483, 304], l: [520, 345] },
-      { part: 'exhaust', a: [420, 268], l: [445, 372] },
-    ],
+  // ---------- four-engine jumbo jet ----------
+  const JW = surface([532, 250], [880, 470], [532, 400], [895, 505]);
+  const JH = surface([530, 575], [685, 628], [527, 645], [697, 650]);
+  const JF = surface([640, 159], [770, 28], [822, 178], [808, 28]);
+  const JUMBO = {
+    name: 'Jumbo jet', example: 'Four-engine wide-body, like the 747',
+    top: {
+      viewBox: '-60 0 1120 710',
+      halves: [
+        { part: 'engine', ...rect(622, 268, 28, 92, 13) },
+        { part: 'engine', ...rect(735, 340, 26, 88, 12) },
+        { part: 'wing', poly: JW.outline },
+        { part: 'slats', poly: JW.quad(.14, .95, 0, .1), cls: 'surf' },
+        { part: 'spoilers', poly: JW.quad(.14, .6, .6, .76), cls: 'surf2' },
+        { part: 'flaps', poly: JW.quad(.03, .64, .78, 1), cls: 'surf' },
+        { part: 'ailerons', poly: JW.quad(.68, .93, .76, 1), cls: 'surf' },
+        { part: 'winglet', poly: [[880, 470], [892, 468], [910, 503], [895, 505]], cls: 'surf2' },
+        { part: 'hstab', poly: JH.outline },
+        { part: 'elevator', poly: JH.quad(.04, .97, .62, 1), cls: 'surf' },
+      ],
+      over: [
+        { part: 'fuselage', d: 'M500,30 C524,36 535,90 535,150 L535,570 C535,610 518,650 500,676 C482,650 465,610 465,570 L465,150 C465,90 476,36 500,30 Z' },
+        { part: 'upperdeck', d: 'M500,70 C510,72 514,95 514,120 L514,245 Q500,268 486,245 L486,120 C486,95 490,72 500,70 Z', cls: 'surf' },
+        { part: 'radome', d: 'M500,30 C515,34 524,50 528,66 Q500,60 472,66 C476,50 485,34 500,30 Z', cls: 'surf' },
+        { part: 'flightdeck', d: 'M488,90 Q500,80 512,90 L511,97 Q500,89 489,97 Z', cls: 'glass' },
+        { part: 'vstab', d: 'M496,555 L504,555 L505,665 L500,684 L495,665 Z', cls: 'surf2' },
+        { part: 'navlights', el: 'circle', a: { cx: 885, cy: 476, r: 5 }, cls: 'light-g' },
+        { part: 'navlights', el: 'circle', a: { cx: 115, cy: 476, r: 5 }, cls: 'light-r' },
+      ],
+      labels: [
+        { part: 'radome', a: [500, 48], l: [570, 28] },
+        { part: 'flightdeck', a: [500, 90], l: [420, 82], end: true },
+        { part: 'upperdeck', a: [500, 160], l: [420, 145], end: true },
+        { part: 'fuselage', a: [500, 380], l: [580, 200] },
+        { part: 'engine', a: [636, 290], l: [700, 240] },
+        { part: 'slats', a: JW.at(.8, .05), l: [905, 400] },
+        { part: 'winglet', a: [902, 490], l: [945, 470] },
+        { part: 'ailerons', a: JW.at(.8, .88), l: [900, 560] },
+        { part: 'flaps', a: JW.at(.33, .9), l: [700, 545] },
+        { part: 'hstab', a: JH.at(.5, .3), l: [740, 605] },
+        { part: 'elevator', a: JH.at(.6, .82), l: [740, 665] },
+        { part: 'wing', a: mirror(JW.at(.5, .4)), l: [150, 330], end: true },
+        { part: 'spoilers', a: mirror(JW.at(.4, .68)), l: [200, 545], end: true },
+        { part: 'navlights', a: [115, 476], l: [70, 440], end: true },
+        { part: 'vstab', a: [500, 640], l: [420, 696], end: true },
+      ],
+    },
+    side: {
+      viewBox: '-80 0 1100 390',
+      under: [
+        { part: 'vstab', poly: JF.outline },
+        { part: 'rudder', poly: JF.quad(.03, 1, .66, 1), cls: 'surf' },
+        { part: 'fuselage', d: 'M40,210 C40,170 75,128 140,118 L300,116 C350,118 380,150 430,158 L720,158 C770,160 810,170 836,178 L836,196 C800,204 730,236 660,240 L130,240 C80,240 40,232 40,210 Z' },
+        { part: 'upperdeck', d: 'M96,158 C108,136 122,122 140,118 L300,116 C350,118 380,150 430,158 Z', cls: 'surf' },
+        { part: 'windows', d: windowRow(176, 680, 184) + ' ' + windowRow(164, 308, 128), cls: 'glass' },
+        { part: 'door', ...rect(150, 172, 17, 46, 4), cls: 'surf' },
+        { part: 'door', ...rect(668, 172, 16, 42, 4), cls: 'surf' },
+        { part: 'radome', d: 'M85,160 C60,170 40,188 40,210 C40,225 56,237 85,239 C75,215 75,185 85,160 Z', cls: 'surf' },
+        { part: 'flightdeck', d: 'M110,140 L124,128 L148,124 L148,136 Z', cls: 'glass' },
+        { part: 'pitot', d: 'M88,214 L88,220 L64,220', cls: 'line' },
+        { part: 'tailcone', d: 'M832,178 L866,186 L868,190 L832,198 Z', cls: 'surf2' },
+        { part: 'hstab', poly: [[700, 201], [772, 190], [822, 190], [822, 198], [780, 204]] },
+        { part: 'elevator', poly: [[800, 190], [822, 190], [822, 198], [800, 200]], cls: 'surf' },
+        { part: 'fairing', d: 'M300,238 C340,258 520,260 570,238 Z', cls: 'surf2' },
+        { part: 'wing', poly: [[300, 231], [580, 226], [625, 230], [580, 236], [320, 240]] },
+        { part: 'winglet', d: 'M610,231 L630,170 L642,170 L625,233 Z', cls: 'surf2' },
+        { part: 'pylon', d: 'M318,251 L336,236 L420,232 L380,251 Z', cls: 'surf2' },
+        { part: 'pylon', d: 'M455,247 L470,232 L545,229 L510,247 Z', cls: 'surf2' },
+        { part: 'noseGear', d: 'M127,240 h6 v60 h-6 Z ' + wheel(130, 308, 11) },
+        { part: 'mainGear', d: 'M562,246 h6 v56 h-6 Z ' + wheel(552, 310, 13) + wheel(578, 310, 13) },
+        { part: 'engine', ...rect(280, 250, 105, 38, 17) },
+        { part: 'engine', ...rect(425, 245, 90, 32, 15) },
+        { part: 'inlet', el: 'ellipse', a: { cx: 283, cy: 269, rx: 7, ry: 19 }, cls: 'surf' },
+        { part: 'inlet', el: 'ellipse', a: { cx: 428, cy: 261, rx: 6, ry: 16 }, cls: 'surf' },
+        { part: 'exhaust', d: 'M385,258 L408,265 L408,273 L385,280 Z', cls: 'surf2' },
+        { part: 'exhaust', d: 'M515,252 L536,258 L536,264 L515,270 Z', cls: 'surf2' },
+      ],
+      labels: [
+        { part: 'radome', a: [55, 210], l: [10, 210], end: true },
+        { part: 'pitot', a: [66, 220], l: [30, 258], end: true },
+        { part: 'flightdeck', a: [130, 133], l: [100, 95], end: true },
+        { part: 'upperdeck', a: [250, 140], l: [230, 70] },
+        { part: 'door', a: [158, 205], l: [180, 330] },
+        { part: 'windows', a: [560, 189], l: [540, 85] },
+        { part: 'fuselage', a: [470, 218], l: [460, 125] },
+        { part: 'winglet', a: [632, 190], l: [610, 130], end: true },
+        { part: 'vstab', a: [730, 100], l: [650, 50], end: true },
+        { part: 'rudder', a: [810, 90], l: [860, 70] },
+        { part: 'tailcone', a: [855, 188], l: [890, 160] },
+        { part: 'elevator', a: [812, 195], l: [890, 222] },
+        { part: 'hstab', a: [750, 198], l: [780, 265] },
+        { part: 'wing', a: [600, 230], l: [660, 255] },
+        { part: 'pylon', a: [380, 240], l: [450, 300] },
+        { part: 'fairing', a: [500, 251], l: [610, 290] },
+        { part: 'inlet', a: [276, 269], l: [230, 290], end: true },
+        { part: 'engine', a: [330, 282], l: [320, 330] },
+        { part: 'mainGear', a: [578, 310], l: [570, 345] },
+        { part: 'noseGear', a: [130, 308], l: [130, 360] },
+        { part: 'exhaust', a: [398, 269], l: [420, 370] },
+      ],
+    },
   };
-  const VIEWS = { top: TOP, side: SIDE };
-  const partsIn = v => [...new Set([...v.halves, ...v.shapes].map(s => s.part))];
+
+  // ---------- light single-engine aircraft ----------
+  const LW = surface([500, 248], [862, 250], [500, 328], [862, 322]);
+  const LH = surface([505, 575], [640, 580], [505, 625], [640, 615]);
+  const LF = surface([720, 183], [800, 72], [846, 190], [834, 72]);
+  const LIGHT = {
+    name: 'Light aircraft', example: 'High-wing single-engine trainer, like the Cessna 172',
+    top: {
+      viewBox: '-40 0 1080 700',
+      under: [
+        { part: 'fuselage', d: 'M500,95 C520,96 530,110 532,140 L534,250 L520,560 L510,640 L490,640 L480,560 L466,250 L468,140 C470,110 480,96 500,95 Z' },
+        { part: 'cowling', d: 'M486,98 L514,98 C524,104 530,120 532,140 L533,170 L467,170 L468,140 C470,120 476,104 486,98 Z', cls: 'surf' },
+        { part: 'windscreen', d: 'M469,196 Q500,180 531,196 L533,250 L467,250 Z', cls: 'glass' },
+        { part: 'propeller', ...rect(400, 95, 200, 7, 3.5), cls: 'surf2' },
+        { part: 'spinner', d: 'M500,72 C510,76 514,88 514,98 L486,98 C486,88 490,76 500,72 Z', cls: 'surf2' },
+      ],
+      halves: [
+        { part: 'wheelPants', ...rect(560, 312, 16, 48, 8), cls: 'surf2' },
+        { part: 'wing', d: 'M500,248 L858,250 Q870,252 870,262 L870,312 Q870,322 858,322 L500,328 Z' },
+        { part: 'flaps', poly: LW.quad(.08, .5, .78, 1), cls: 'surf' },
+        { part: 'ailerons', poly: LW.quad(.55, .93, .76, 1), cls: 'surf' },
+        { part: 'hstab', poly: LH.outline },
+        { part: 'elevator', poly: LH.quad(.03, 1, .6, 1), cls: 'surf' },
+      ],
+      over: [
+        { part: 'trimTab', poly: LH.quad(.55, .85, .86, 1), cls: 'surf2' },
+        { part: 'vstab', d: 'M497,560 L503,560 L504,640 L500,652 L496,640 Z', cls: 'surf2' },
+        { part: 'navlights', el: 'circle', a: { cx: 864, cy: 258, r: 5 }, cls: 'light-g' },
+        { part: 'navlights', el: 'circle', a: { cx: 136, cy: 258, r: 5 }, cls: 'light-r' },
+      ],
+      labels: [
+        { part: 'propeller', a: [580, 99], l: [640, 70] },
+        { part: 'spinner', a: [500, 82], l: [420, 60], end: true },
+        { part: 'cowling', a: [500, 140], l: [420, 130], end: true },
+        { part: 'windscreen', a: [500, 215], l: [420, 205], end: true },
+        { part: 'wing', a: mirror(LW.at(.5, .35)), l: [250, 200], end: true },
+        { part: 'flaps', a: LW.at(.3, .9), l: [650, 430] },
+        { part: 'ailerons', a: LW.at(.75, .88), l: [820, 380] },
+        { part: 'navlights', a: [864, 258], l: [900, 220] },
+        { part: 'wheelPants', a: [568, 350], l: [620, 380] },
+        { part: 'fuselage', a: [500, 460], l: [420, 460], end: true },
+        { part: 'hstab', a: LH.at(.5, .3), l: [680, 565] },
+        { part: 'trimTab', a: LH.at(.7, .93), l: [680, 610] },
+        { part: 'elevator', a: mirror(LH.at(.5, .8)), l: [350, 650], end: true },
+        { part: 'vstab', a: [500, 630], l: [470, 690], end: true },
+      ],
+    },
+    side: {
+      viewBox: '-80 40 1100 360',
+      under: [
+        { part: 'vstab', poly: LF.outline },
+        { part: 'rudder', poly: LF.quad(.05, 1, .62, 1), cls: 'surf' },
+        { part: 'dorsal', d: 'M610,178 C660,174 700,165 737,160 L722,184 Z', cls: 'surf2' },
+        { part: 'fuselage', d: 'M200,172 L262,150 L430,148 C470,152 500,168 540,178 L845,190 L847,201 L540,226 C480,238 400,246 330,248 L200,244 Z' },
+        { part: 'cowling', d: 'M95,190 C100,180 130,174 200,172 L200,244 L130,242 C108,240 95,228 95,205 Z', cls: 'surf' },
+        { part: 'cabinDoor', ...rect(245, 154, 60, 78, 6), cls: 'surf' },
+        { part: 'windows', d: 'M252,158 h46 v28 h-46 Z M315,158 h57 v28 h-57 Z M382,158 h38 v22 h-38 Z', cls: 'glass' },
+        { part: 'windscreen', poly: [[204, 172], [262, 151], [282, 151], [240, 172]], cls: 'glass' },
+        { part: 'hstab', poly: [[740, 198], [800, 192], [846, 193], [846, 200], [800, 202]] },
+        { part: 'elevator', poly: [[818, 192], [846, 193], [846, 200], [818, 201]], cls: 'surf' },
+        { part: 'strut', d: 'M378,147 L386,147 L306,238 L298,238 Z', cls: 'surf2' },
+        { part: 'wing', d: 'M250,146 C260,136 320,134 430,140 L432,147 C330,150 270,152 250,146 Z' },
+        { part: 'mainGear', d: 'M325,244 L333,244 L362,292 L354,296 Z' },
+        { part: 'noseGear', d: 'M150,244 h6 v48 h-6 Z' },
+        { part: 'wheelPants', d: 'M332,290 C332,280 352,278 380,282 C392,284 396,296 392,304 C386,312 350,314 336,308 C330,304 330,296 332,290 Z M136,292 C138,284 158,282 172,288 C178,294 176,304 168,308 C156,312 140,310 136,304 Z', cls: 'surf2' },
+        { part: 'propeller', d: 'M78,90 C86,92 88,150 86,208 C88,266 86,322 78,326 C72,322 72,266 74,208 C72,150 72,92 78,90 Z', cls: 'surf2' },
+        { part: 'spinner', d: 'M95,190 C80,194 70,203 66,208 C70,213 80,222 95,226 Z', cls: 'surf2' },
+      ],
+      labels: [
+        { part: 'propeller', a: [80, 110], l: [20, 95], end: true },
+        { part: 'spinner', a: [76, 208], l: [20, 208], end: true },
+        { part: 'windscreen', a: [240, 162], l: [200, 95], end: true },
+        { part: 'wing', a: [340, 142], l: [330, 85] },
+        { part: 'windows', a: [340, 172], l: [400, 110] },
+        { part: 'dorsal', a: [690, 170], l: [600, 120], end: true },
+        { part: 'vstab', a: [790, 120], l: [700, 60], end: true },
+        { part: 'rudder', a: [836, 110], l: [880, 90] },
+        { part: 'hstab', a: [780, 198], l: [800, 260] },
+        { part: 'elevator', a: [835, 196], l: [880, 215] },
+        { part: 'fuselage', a: [600, 205], l: [600, 280] },
+        { part: 'strut', a: [340, 195], l: [470, 250] },
+        { part: 'noseGear', a: [153, 268], l: [110, 345], end: true },
+        { part: 'wheelPants', a: [160, 300], l: [200, 345] },
+        { part: 'mainGear', a: [345, 270], l: [420, 345] },
+        { part: 'cowling', a: [170, 236], l: [190, 372] },
+        { part: 'cabinDoor', a: [275, 215], l: [330, 372] },
+      ],
+    },
+  };
+
+  // ---------- single-engine fighter ----------
+  const FW = surface([540, 385], [790, 505], [540, 560], [790, 545]);
+  const FH = surface([540, 570], [660, 630], [540, 645], [665, 655]);
+  const FF = surface([640, 160], [760, 40], [805, 162], [792, 40]);
+  const FIGHTER = {
+    name: 'Fighter jet', example: 'Single-engine multirole fighter, like the F-16',
+    top: {
+      viewBox: '-40 0 1080 720',
+      halves: [
+        { part: 'lerx', poly: [[527, 215], [556, 330], [592, 410], [545, 410], [535, 300]], cls: 'surf2' },
+        { part: 'wing', poly: FW.outline },
+        { part: 'lef', poly: FW.quad(.03, 1, 0, .15), cls: 'surf' },
+        { part: 'flaperons', poly: FW.quad(.05, .75, .82, 1), cls: 'surf' },
+        { part: 'missileRail', ...rect(788, 468, 9, 90, 3), cls: 'surf2' },
+        { part: 'stabilator', poly: FH.outline, cls: 'surf' },
+      ],
+      over: [
+        { part: 'fuselage', d: 'M500,50 C512,54 520,90 522,140 L530,240 L540,380 L545,560 L540,640 L520,660 L480,660 L460,640 L455,560 L460,380 L470,240 L478,140 C480,90 488,54 500,50 Z' },
+        { part: 'radome', d: 'M500,50 C512,54 519,90 521,130 L479,130 C481,90 488,54 500,50 Z', cls: 'surf' },
+        { part: 'pitot', d: 'M500,50 L500,22', cls: 'line' },
+        { part: 'canopy', el: 'ellipse', a: { cx: 500, cy: 200, rx: 13, ry: 50 }, cls: 'glass' },
+        { part: 'vstab', d: 'M497,520 L503,520 L504,650 L500,665 L496,650 Z', cls: 'surf2' },
+        { part: 'afterburner', ...rect(482, 660, 36, 30, 4), cls: 'surf2' },
+      ],
+      labels: [
+        { part: 'pitot', a: [500, 30], l: [570, 25] },
+        { part: 'radome', a: [500, 100], l: [420, 95], end: true },
+        { part: 'canopy', a: [500, 200], l: [420, 195], end: true },
+        { part: 'fuselage', a: [500, 300], l: [420, 300], end: true },
+        { part: 'lerx', a: [550, 330], l: [620, 300] },
+        { part: 'lef', a: FW.at(.6, .07), l: [820, 440] },
+        { part: 'missileRail', a: [795, 515], l: [830, 500] },
+        { part: 'flaperons', a: FW.at(.4, .9), l: [700, 600] },
+        { part: 'wing', a: mirror(FW.at(.5, .45)), l: [250, 420], end: true },
+        { part: 'stabilator', a: FH.at(.5, .5), l: [700, 650] },
+        { part: 'vstab', a: [500, 600], l: [380, 690], end: true },
+        { part: 'afterburner', a: [500, 675], l: [560, 702] },
+      ],
+    },
+    side: {
+      viewBox: '-80 20 1120 330',
+      under: [
+        { part: 'vstab', poly: FF.outline },
+        { part: 'rudder', poly: FF.quad(.03, .85, .68, 1), cls: 'surf' },
+        { part: 'fuselage', d: 'M40,195 C70,184 140,174 210,170 L420,160 L800,160 L840,168 L840,200 L800,206 L560,212 L330,222 L200,214 C120,208 70,202 40,195 Z' },
+        { part: 'radome', d: 'M40,195 C70,184 110,177 140,174 L140,210 C100,205 66,201 40,195 Z', cls: 'surf' },
+        { part: 'canopy', d: 'M165,172 C185,138 255,132 310,150 C328,156 340,162 348,165 L300,166 Z', cls: 'glass' },
+        { part: 'lerx', d: 'M240,186 L400,190 L400,195 L250,190 Z', cls: 'surf2' },
+        { part: 'intake', d: 'M205,214 L215,244 L335,244 L330,222 Z', cls: 'surf' },
+        { part: 'wing', poly: [[400, 192], [600, 186], [660, 190], [600, 196], [420, 198]] },
+        { part: 'stabilator', poly: [[700, 190], [790, 182], [840, 184], [840, 192], [790, 196]], cls: 'surf' },
+        { part: 'ventralFins', d: 'M720,206 L745,206 L760,232 L738,232 Z', cls: 'surf2' },
+        { part: 'afterburner', d: 'M840,168 L880,172 L880,196 L840,200 Z', cls: 'surf2' },
+        { part: 'pitot', d: 'M40,195 L12,195', cls: 'line' },
+        { part: 'noseGear', d: 'M230,244 h6 v52 h-6 Z ' + wheel(233, 302, 10) },
+        { part: 'mainGear', d: 'M467,216 h6 v76 h-6 Z ' + wheel(470, 300, 14) },
+      ],
+      labels: [
+        { part: 'pitot', a: [18, 195], l: [10, 150], end: true },
+        { part: 'radome', a: [80, 192], l: [60, 240], end: true },
+        { part: 'canopy', a: [250, 152], l: [250, 100] },
+        { part: 'lerx', a: [320, 189], l: [380, 95] },
+        { part: 'fuselage', a: [520, 185], l: [520, 120] },
+        { part: 'vstab', a: [720, 100], l: [640, 50], end: true },
+        { part: 'rudder', a: [790, 110], l: [840, 90] },
+        { part: 'afterburner', a: [865, 184], l: [890, 150] },
+        { part: 'stabilator', a: [800, 188], l: [890, 220] },
+        { part: 'ventralFins', a: [745, 225], l: [770, 280] },
+        { part: 'wing', a: [560, 190], l: [600, 260] },
+        { part: 'intake', a: [270, 236], l: [280, 300] },
+        { part: 'noseGear', a: [233, 302], l: [180, 320], end: true },
+        { part: 'mainGear', a: [470, 300], l: [500, 320] },
+      ],
+    },
+  };
+
+  const MODELS = { airliner: AIRLINER, jumbo: JUMBO, light: LIGHT, fighter: FIGHTER };
+  const VIEW_NAMES = ['top', 'side'];
+  const shapesOf = v => [...(v.under || []), ...(v.halves || []), ...(v.over || [])];
+  const partsIn = v => [...new Set(shapesOf(v).map(s => s.part))];
+  const model = () => MODELS[state.model];
+  const view = () => model()[state.view];
+  const viewsWith = id => VIEW_NAMES.filter(k => partsIn(model()[k]).includes(id));
+  const modelParts = () => new Set(VIEW_NAMES.flatMap(k => partsIn(model()[k])));
 
   // ---------- rendering ----------
   const svg = document.getElementById('diagram');
@@ -355,18 +657,25 @@
     e.dataset.part = s.part;
     return e;
   }
+  function addShapes(parent, list) {
+    (list || []).forEach(s => {
+      parent.appendChild(shapeEl(s));
+      if (s.cls === 'line') { const h = shapeEl(s); h.setAttribute('class', 'hit'); parent.appendChild(h); }
+    });
+  }
   function render() {
-    const v = VIEWS[state.view];
+    const v = view();
     svg.replaceChildren();
     svg.setAttribute('viewBox', v.viewBox);
+    svg.setAttribute('aria-label', `${model().name}, ${state.view} view`);
     const plane = make('g', {});
-    const half = make('g', {}), mirrored = make('g', { transform: 'translate(1000,0) scale(-1,1)' });
-    v.halves.forEach(s => { mirrored.appendChild(shapeEl(s)); half.appendChild(shapeEl(s)); });
-    plane.append(mirrored, half);
-    v.shapes.forEach(s => {
-      plane.appendChild(shapeEl(s));
-      if (s.cls === 'line') { const h = shapeEl(s); h.setAttribute('class', 'hit'); plane.appendChild(h); }
-    });
+    addShapes(plane, v.under);
+    if (v.halves) {
+      const mirrored = make('g', { transform: 'translate(1000,0) scale(-1,1)' }), half = make('g', {});
+      addShapes(mirrored, v.halves); addShapes(half, v.halves);
+      plane.append(mirrored, half);
+    }
+    addShapes(plane, v.over);
     svg.appendChild(plane);
     const labels = make('g', {});
     v.labels.forEach(L => {
@@ -388,7 +697,7 @@
     mark('on', state.mode === 'explore' ? state.selected : null);
     mark('hov', state.hover);
     stage.classList.toggle('labels-off', state.mode === 'quiz' || !state.showLabels);
-    const here = partsIn(VIEWS[state.view]);
+    const here = partsIn(view());
     document.querySelectorAll('.pitem').forEach(b => {
       b.classList.toggle('on', b.dataset.part === state.selected);
       b.classList.toggle('dim', !here.includes(b.dataset.part));
@@ -397,39 +706,64 @@
 
   // ---------- details ----------
   const detail = document.getElementById('detail');
+  const EMPTY = detail.innerHTML;
   function showDetail(id) {
+    if (!id) { detail.innerHTML = EMPTY; return; }
     const p = PARTS[id];
-    const views = Object.keys(VIEWS).filter(k => partsIn(VIEWS[k]).includes(id)).map(k => k + ' view');
     detail.innerHTML = `<h2>${p.name}</h2>${p.aka ? `<div class="aka">also called: ${p.aka}</div>` : ''}
       <p>${p.desc}</p>
       <div class="chips">${p.axis ? `<span class="chip axis">controls ${p.axis.toLowerCase()}</span>` : ''}
         <span class="chip">${p.group}</span>${p.tag ? `<span class="chip">${p.tag}</span>` : ''}
-        <span class="chip">${views.join(' · ')}</span></div>`;
+        <span class="chip">${viewsWith(id).map(k => k + ' view').join(' · ')}</span></div>`;
   }
 
-  // ---------- parts list ----------
+  // ---------- parts list (only the parts the chosen model has) ----------
   const plist = document.getElementById('plist');
-  GROUPS.forEach(g => {
-    const wrap = document.createElement('div'); wrap.className = 'pgroup';
-    wrap.innerHTML = `<div class="eyebrow">${g}</div><div class="pitems"></div>`;
-    Object.entries(PARTS).filter(([, p]) => p.group === g).forEach(([id, p]) => {
-      const b = document.createElement('button'); b.className = 'pitem'; b.dataset.part = id; b.textContent = p.name;
-      b.addEventListener('click', () => {
-        if (!partsIn(VIEWS[state.view]).includes(id)) setView(Object.keys(VIEWS).find(k => partsIn(VIEWS[k]).includes(id)));
-        select(id);
+  function buildList() {
+    const have = modelParts();
+    plist.replaceChildren();
+    GROUPS.forEach(g => {
+      const ids = Object.keys(PARTS).filter(id => PARTS[id].group === g && have.has(id));
+      if (!ids.length) return;
+      const wrap = document.createElement('div'); wrap.className = 'pgroup';
+      wrap.innerHTML = `<div class="eyebrow">${g}</div><div class="pitems"></div>`;
+      ids.forEach(id => {
+        const b = document.createElement('button'); b.className = 'pitem'; b.dataset.part = id; b.textContent = PARTS[id].name;
+        b.addEventListener('click', () => {
+          if (!partsIn(view()).includes(id)) setView(viewsWith(id)[0]);
+          select(id);
+        });
+        wrap.querySelector('.pitems').appendChild(b);
       });
-      wrap.querySelector('.pitems').appendChild(b);
+      plist.appendChild(wrap);
     });
-    plist.appendChild(wrap);
+    document.getElementById('partCount').textContent = have.size + ' parts';
+  }
+
+  // ---------- model picker ----------
+  const modelSeg = document.getElementById('modelSeg');
+  Object.entries(MODELS).forEach(([id, m]) => {
+    const b = document.createElement('button'); b.dataset.model = id; b.textContent = m.name;
+    b.addEventListener('click', () => setModel(id));
+    modelSeg.appendChild(b);
   });
 
   // ---------- state & interaction ----------
   const stage = document.getElementById('stage');
   const tip = document.getElementById('tip');
-  const state = { view: 'top', mode: 'explore', selected: null, hover: null, showLabels: true,
+  const state = { model: 'airliner', view: 'top', mode: 'explore', selected: null, hover: null, showLabels: true,
     quiz: { target: null, correct: 0, total: 0, streak: 0, locked: false, missed: false } };
 
   function select(id) { state.selected = id; showDetail(id); paint(); }
+  function setModel(id) {
+    state.model = id;
+    modelSeg.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', b.dataset.model === id));
+    document.getElementById('modelBlurb').textContent = model().example;
+    try { history.replaceState(null, '', '#' + id); } catch (e) {}
+    buildList();
+    select(state.selected && modelParts().has(state.selected) ? state.selected : null);
+    setView(state.view);
+  }
   function setView(v) {
     state.view = v;
     document.querySelectorAll('[data-view]').forEach(b => b.setAttribute('aria-pressed', b.dataset.view === v));
@@ -468,12 +802,14 @@
   // ---------- quiz ----------
   const q = state.quiz;
   const fb = document.getElementById('feedback');
+  let pending = null;
   function nextQuestion() {
-    const pool = partsIn(VIEWS[state.view]).filter(id => id !== q.target);
+    clearTimeout(pending);
+    const pool = partsIn(view()).filter(id => id !== q.target);
     q.target = pool[Math.floor(Math.random() * pool.length)];
     q.locked = false; q.missed = false;
     document.getElementById('quizTarget').textContent = PARTS[q.target].name;
-    document.getElementById('quizView').textContent = state.view + ' view';
+    document.getElementById('quizView').textContent = `${model().name.toLowerCase()} · ${state.view} view`;
     fb.textContent = ''; fb.className = 'feedback';
     mark('ok'); mark('no');
   }
@@ -491,7 +827,7 @@
       fb.textContent = q.missed ? `That's the ${PARTS[id].name}.` : `Correct — ${PARTS[id].name}!`;
       fb.className = 'feedback ok';
       updateScore();
-      setTimeout(nextQuestion, 1100);
+      pending = setTimeout(nextQuestion, 1100);
     } else {
       q.missed = true; q.streak = 0;
       mark('no', id);
@@ -505,7 +841,7 @@
     q.locked = true; q.total++; q.streak = 0; updateScore();
     mark('no'); mark('ok', q.target);
     fb.textContent = `Here's the ${PARTS[q.target].name}.`; fb.className = 'feedback';
-    setTimeout(nextQuestion, 1400);
+    pending = setTimeout(nextQuestion, 1400);
   });
   document.getElementById('resetBtn').addEventListener('click', () => { q.correct = q.total = q.streak = 0; updateScore(); });
 
@@ -514,7 +850,8 @@
   document.getElementById('showLabels').addEventListener('change', e => { state.showLabels = e.target.checked; paint(); });
   document.getElementById('yr').textContent = new Date().getFullYear();
 
-  render();
+  const fromHash = location.hash.slice(1);
+  setModel(MODELS[fromHash] ? fromHash : 'airliner');
 })();
 </script>
 </body>
